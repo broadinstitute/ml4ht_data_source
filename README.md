@@ -12,3 +12,9 @@ pip install -r requirements.txt
 pre-commit install
 pip install .
 ```
+
+## Tests
+`torch_ml4h` uses `pytest` for tests.
+```bash
+pytest tests
+```
