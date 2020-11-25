@@ -1,16 +1,28 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional, Callable, Dict, Any, Union, TypeVar, Generic
 from enum import Enum
 
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import DateSelector
-from ml4h.data.defines import StateSetter, SampleID, DateTime, State, Tensor, TensorError, EXCEPTIONS, Batch
+from ml4h.data.defines import StateSetter, SampleID, DateTime, State, Tensor, TensorError, EXCEPTIONS, Batch, HalfBatch
+from ml4h.data.result import Result
 
 
 class TransformationType(Enum):
     FILTER = 'filter'
     AUGMENTATION = 'augmentation'
     NORMALIZATION = 'normalization'
+
+
+@dataclass
+class TensorData:
+    summary: Tensor
+    dt: DateTime
+    state: State
+
+
+ExploreTensor = Result[TensorData, str]
+ExploreBatch = Result[Tuple[Dict[str, ExploreTensor], Dict[str, ExploreTensor]], str]
 
 
 @dataclass
@@ -63,10 +75,13 @@ class TensorMap:
             name: str,
             data_description: DataDescription,
             transformations: List[Transformation] = None,
+            summarizer: Callable[[Tensor], Any] = None,
     ):
         self.transformations = transformations or []
         self._data_description = data_description
         self._name = name
+        # Default to taking the mean across the channel axis to summarize
+        self.summarizer = summarizer or (lambda x: x.mean(axis=-1))
 
     @property
     def data_description(self) -> DataDescription:
@@ -76,7 +91,7 @@ class TensorMap:
     def name(self) -> str:
         return self._name
 
-    def get_tensor_explore(self, sample_id: SampleID, dt: DateTime, state: State) -> Tuple[Optional[Tensor], TensorError]:
+    def get_tensor_explore(self, sample_id: SampleID, dt: DateTime, state: State) -> ExploreTensor:
         """
         For use during exploration.
         Catches errors and returns where they happen in the series of transformations.
@@ -84,13 +99,13 @@ class TensorMap:
         try:
             x = self.data_description.get_raw_data(sample_id, dt)
         except EXCEPTIONS as e:
-            return None, format_error(e, f'Getting raw data failed')
+            return ExploreTensor.Error(format_error(e, f'Getting raw data failed'))
         for transformation in self.transformations:
             try:
                 x = transformation(x, dt, state)
             except EXCEPTIONS as e:
-                return None, format_error(e, f'{transformation.__name__} failed')
-        return x, None
+                return ExploreTensor.Error(format_error(e, f'{transformation.__name__} failed'))
+        return ExploreTensor.Data(TensorData(self.summarizer(x), dt, state))
 
     def get_tensor(self, sample_id: SampleID, dt: DateTime, state: State) -> Tensor:
         """
@@ -132,49 +147,43 @@ class PipelineSampleGetter:
         self.date_selector = date_selector
         self.state_setter = state_setter or (lambda sample_id: {})
 
+    def _half_batch(
+            self, sample_id: SampleID,
+            dts: Dict[DataDescription, DateTime],
+            state: State,
+            is_input: bool,
+            explore: bool = False,
+    ) -> Union[HalfBatch, Dict[str, ExploreTensor]]:
+        half_batch = {}
+        tmaps = self.tensor_maps_in if is_input else self.tensor_maps_out
+        for tensor_map in tmaps:
+            data_description = tensor_map.data_description
+            dt = dts[data_description]
+            name = tensor_map.input_name if is_input else tensor_map.output_name
+            if explore:
+                half_batch[name] = tensor_map.get_tensor_explore(sample_id, dt, state)
+            else:
+                half_batch[name] = tensor_map.get_tensor(sample_id, dt, state)
+        return half_batch
+
     def __call__(self, sample_id: SampleID) -> Batch:
         dts = self.date_selector.select_dates(sample_id)
         state = self.state_setter(sample_id)
-        tensors_in = {}
-        for tensor_map in self.tensor_maps_in:
-            data_description = tensor_map.data_description
-            dt = dts[data_description]
-            tensors_in[tensor_map.input_name] = tensor_map.get_tensor(sample_id, dt, state)
-
-        tensors_out = {}
-        for tensor_map in self.tensor_maps_out:
-            data_description = tensor_map.data_description
-            dt = dts[data_description]
-            tensors_out[tensor_map.output_name] = tensor_map.get_tensor(sample_id, dt, state)
-
+        tensors_in = self._half_batch(sample_id, dts, state, True)
+        tensors_out = self._half_batch(sample_id, dts, state, False)
         return tensors_in, tensors_out
 
-    def explore_batch(self, sample_id: SampleID) -> Tuple[Optional[Batch], TensorError]:
+    def explore_batch(self, sample_id: SampleID) -> ExploreBatch:
         try:
             dts = self.date_selector.select_dates(sample_id)
         except EXCEPTIONS as e:
-            return None, format_error(e, f'Selecting dates failed')
+            return ExploreBatch.Error(format_error(e, f'Selecting dates failed'))
         try:
             state = self.state_setter(sample_id)
         except EXCEPTIONS as e:
-            return None, format_error(e, f'Setting state failed')
+            return ExploreBatch.Error(format_error(e, f'Setting state failed'))
 
-        tensors_in = {}
-        for tensor_map in self.tensor_maps_in:
-            data_description = tensor_map.data_description
-            dt = dts[data_description]
-            tensor, error = tensor_map.get_tensor_explore(sample_id, dt, state)
-            if error is not None:
-                return None, error
-            tensors_in[tensor_map.input_name] = tensor
+        tensors_in = self._half_batch(sample_id, dts, state, True, explore=True)
+        tensors_out = self._half_batch(sample_id, dts, state, False, explore=True)
 
-        tensors_out = {}
-        for tensor_map in self.tensor_maps_in:
-            data_description = tensor_map.data_description
-            dt = dts[data_description]
-            tensor, error = tensor_map.get_tensor_explore(sample_id, dt, state)
-            if error is not None:
-                return None, error
-            tensors_in[tensor_map.output_name] = tensor
-
-        return (tensors_in, tensors_out), None
+        return ExploreBatch.Data((tensors_in, tensors_out))

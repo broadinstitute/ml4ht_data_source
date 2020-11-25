@@ -48,6 +48,6 @@ class DataDescription:
     def get_summary_data(self, sample_id: SampleID, dt: DateTime) -> Dict[str, Any]:
         """
         Get a summary of the tensor for a sample id and a date for exploration.
-        It's recommended to override this for your own explorations.
+        It's recommended to override this for large tensors.
         """
         return {'raw_data': self.get_raw_data(sample_id, dt)}

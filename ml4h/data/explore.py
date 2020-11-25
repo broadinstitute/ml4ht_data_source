@@ -14,6 +14,7 @@ ERROR_COL = 'error'
 SAMPLE_ID_COL = 'sample_id'
 DATA_DESCRIPTION_COL = 'date_description'
 DT_COL = 'dt'
+STATE_COL = 'state'
 
 
 def data_description_summarize_sample_id(
@@ -140,11 +141,26 @@ def explore_date_selector(
     )
 
 
-def pipeline_selector_summarize_sample_id(
+def pipeline_sample_getter_summarize_sample_id(
         sample_id: SampleID,
         sample_getter: PipelineSampleGetter,
 ) -> pd.DataFrame:
-    pass  # TODO: make PipelineSampleGetter return dates + state?
+    """
+    Get the summary, dates, states or errors from each TensorMap for a sample id
+    """
+    explore_batch = sample_getter.explore_batch(sample_id)
+    out = {SAMPLE_ID_COL: sample_id}
+    if explore_batch.ok:
+        for name, tensor_result in {**explore_batch.data[0], **explore_batch.data[1]}.items():
+            if tensor_result.ok:
+                out[f'{name}_summary'] = tensor_result.data.summary
+                out[f'{name}_{DT_COL}'] = tensor_result.data.dt
+                out[f'{name}_{STATE_COL}'] = tensor_result.data.state
+            else:
+                out[f'{name}_{ERROR_COL}'] = tensor_result.error
+    else:
+        out[ERROR_COL] = explore_batch.error
+    return pd.DataFrame[out]
 
 
 def explore_pipeline_sample_getter(
@@ -155,7 +171,7 @@ def explore_pipeline_sample_getter(
     """
     Get the datetime selected,
     """
-    summarize = partial(date_selector_summarize_sample_id, sample_getter=pipeline_sample_getter)
+    summarize = partial(pipeline_sample_getter_summarize_sample_id, sample_getter=pipeline_sample_getter)
     return build_df(
         summarize,
         sample_ids,
