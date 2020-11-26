@@ -147,8 +147,9 @@ def pipeline_sample_getter_summarize_sample_id(
     explore_batch = sample_getter.explore_batch(sample_id)
     out = {SAMPLE_ID_COL: sample_id}
     if explore_batch.ok:
-        out[STATE_COL] = [explore_batch.data[2]]
-        for name, tensor_result in {**explore_batch.data[0], **explore_batch.data[1]}.items():
+        data = explore_batch.data
+        out[STATE_COL] = [data.state]
+        for name, tensor_result in {**data.in_batch, **explore_batch.data.out_batch}.items():
             if tensor_result.ok:
                 out[f'{name}_summary'] = [tensor_result.data.summary]
                 out[f'{name}_{DT_COL}'] = [tensor_result.data.dt]

@@ -174,11 +174,11 @@ class TestPipelineSampleGetterSummarizeSampeID:
 
     def test_success(self):
         row = pipeline_sample_getter_summarize_sample_id(0, PIPE).iloc[0]
-        expected_in, expected_out, state = PIPE.explore_batch(0).data
-        for name, tensor_result in {**expected_in, **expected_out}.items():
+        data = PIPE.explore_batch(0).data
+        for name, tensor_result in {**data.in_batch, **data.out_batch}.items():
             assert row[f'{name}_summary'] == tensor_result.data.summary
             assert row[f'{name}_{DT_COL}'] == tensor_result.data.dt
-        assert row[STATE_COL] == state
+        assert row[STATE_COL] == data.state
 
     def test_fail_date_select(self):
         row = pipeline_sample_getter_summarize_sample_id(3, PIPE).iloc[0]
@@ -186,8 +186,8 @@ class TestPipelineSampleGetterSummarizeSampeID:
 
     def test_fail_one_tmap(self):
         row = pipeline_sample_getter_summarize_sample_id(2, PIPE).iloc[0]
-        expected_in, expected_out, state = PIPE.explore_batch(1).data
-        for name, tensor_result in {**expected_in, **expected_out}.items():
+        data = PIPE.explore_batch(1).data
+        for name, tensor_result in {**data.in_batch, **data.out_batch}.items():
             if tensor_result.ok:
                 row[f'{name}_summary'] = tensor_result.data.summary
                 row[f'{name}_{DT_COL}'] = tensor_result.data.dt

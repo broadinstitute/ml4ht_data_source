@@ -160,28 +160,28 @@ class TestPipelineSampleGetter:
             PIPE(1)
 
     def test_explore_batch(self):
-        in_batch, out_batch, state = PIPE.explore_batch(0).data
-        assert state['factor'] == 0
+        data = PIPE.explore_batch(0).data
+        assert data.state['factor'] == 0
 
-        tensor_data = in_batch[TMAP_1.input_name]
+        tensor_data = data.in_batch[TMAP_1.input_name]
         assert tensor_data.ok
         assert tensor_data.data.summary == 10
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=1)
 
-        tensor_data = out_batch[TMAP_2.output_name]
+        tensor_data = data.out_batch[TMAP_2.output_name]
         assert tensor_data.ok
         assert tensor_data.data.summary == 0
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=2)
 
     def test_explore_batch_fails_raw_data(self):
-        in_batch, out_batch, state = PIPE.explore_batch(2).data
-        assert state['factor'] == 2
+        data = PIPE.explore_batch(2).data
+        assert data.state['factor'] == 2
 
-        tensor_data = in_batch[TMAP_1.input_name]
+        tensor_data = data.in_batch[TMAP_1.input_name]
         assert not tensor_data.ok
         assert tensor_data.error == 'Getting raw data failed causing error of type ValueError.'
 
-        tensor_data = out_batch[TMAP_2.output_name]
+        tensor_data = data.out_batch[TMAP_2.output_name]
         assert tensor_data.ok
         assert tensor_data.data.summary == 20
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=1)
@@ -192,14 +192,14 @@ class TestPipelineSampleGetter:
         assert result.error == 'Selecting dates failed causing error of type NoDTError.'
 
     def test_explore_batch_fails_filter(self):
-        in_batch, out_batch, state = PIPE.explore_batch(1).data
-        assert state['factor'] == 1
+        data = PIPE.explore_batch(1).data
+        assert data.state['factor'] == 1
 
-        tensor_data = in_batch[TMAP_1.input_name]
+        tensor_data = data.in_batch[TMAP_1.input_name]
         assert not tensor_data.ok
         assert tensor_data.error == 'error_on_negative_TransformationType.FILTER failed causing error of type ValueError.'
 
-        tensor_data = out_batch[TMAP_2.output_name]
+        tensor_data = data.out_batch[TMAP_2.output_name]
         assert tensor_data.ok
         assert tensor_data.data.summary == 10
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=1)

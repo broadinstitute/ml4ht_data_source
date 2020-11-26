@@ -25,12 +25,12 @@ ExploreTensor = Result[TensorData, str]
 
 @dataclass
 class BatchData:
-    in_batch = Dict[str, ExploreTensor]
-    out_batch = Dict[str, ExploreTensor]
-    state = State
+    in_batch: Dict[str, ExploreTensor]
+    out_batch: Dict[str, ExploreTensor]
+    state: State
 
 
-ExploreBatch = Result[State, str]
+ExploreBatch = Result[BatchData, str]
 
 
 @dataclass
@@ -201,4 +201,4 @@ class PipelineSampleGetter:
         tensors_in = self._half_batch(sample_id, dts, state, True, explore=True)
         tensors_out = self._half_batch(sample_id, dts, state, False, explore=True)
 
-        return ExploreBatch.Data((tensors_in, tensors_out, state))
+        return ExploreBatch.Data(BatchData(tensors_in, tensors_out, state))
