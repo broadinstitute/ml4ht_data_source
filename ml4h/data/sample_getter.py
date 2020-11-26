@@ -4,7 +4,7 @@ from enum import Enum
 
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import DateSelector
-from ml4h.data.defines import StateSetter, SampleID, DateTime, State, Tensor, TensorError, EXCEPTIONS, Batch, HalfBatch
+from ml4h.data.defines import StateSetter, SampleID, DateTime, State, Tensor, EXCEPTIONS, Batch, HalfBatch
 from ml4h.data.result import Result
 
 
@@ -18,11 +18,10 @@ class TransformationType(Enum):
 class TensorData:
     summary: Tensor
     dt: DateTime
-    state: State
 
 
 ExploreTensor = Result[TensorData, str]
-ExploreBatch = Result[Tuple[Dict[str, ExploreTensor], Dict[str, ExploreTensor]], str]
+ExploreBatch = Result[Tuple[Dict[str, ExploreTensor], Dict[str, ExploreTensor], State], str]
 
 
 @dataclass
@@ -112,7 +111,7 @@ class TensorMap:
                 x = transformation(x, dt, state)
             except EXCEPTIONS as e:
                 return ExploreTensor.Error(format_error(e, f'{transformation.name} failed'))
-        return ExploreTensor.Data(TensorData(self.summarizer(x), dt, state))
+        return ExploreTensor.Data(TensorData(self.summarizer(x), dt))
 
     def get_tensor(self, sample_id: SampleID, dt: DateTime, state: State) -> Tensor:
         """
@@ -193,4 +192,4 @@ class PipelineSampleGetter:
         tensors_in = self._half_batch(sample_id, dts, state, True, explore=True)
         tensors_out = self._half_batch(sample_id, dts, state, False, explore=True)
 
-        return ExploreBatch.Data((tensors_in, tensors_out))
+        return ExploreBatch.Data((tensors_in, tensors_out, state))

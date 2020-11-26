@@ -8,26 +8,6 @@ from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import RangeDateSelector, first_dt
 
 
-def error_on_negative(x, _, __):
-    if np.any(x <= 0):
-        raise ValueError('Not all values positive.')
-    return x
-
-
-FILTER_ALL_POSITIVE = Transformation(TransformationType.FILTER, error_on_negative)
-
-
-def multiply_by_state(x, _, state):
-    return x * state['factor']
-
-
-STATE_MULTIPLY = Transformation(TransformationType.NORMALIZATION, multiply_by_state)
-
-
-def state_setter_state_multiply(sample_id):
-    return {'factor': sample_id}
-
-
 RAW_DATA_1 = {
     0: {
         datetime(year=2000, month=3, day=1): np.array([10]),
@@ -78,6 +58,28 @@ class DictionaryDataDescription(DataDescription):
 DD1 = DictionaryDataDescription(RAW_DATA_1, 2)
 DD2 = DictionaryDataDescription(RAW_DATA_2, -1)
 
+
+def error_on_negative(x, _, __):
+    if np.any(x <= 0):
+        raise ValueError('Not all values positive.')
+    return x
+
+
+FILTER_ALL_POSITIVE = Transformation(TransformationType.FILTER, error_on_negative)
+
+
+def multiply_by_state(x, _, state):
+    return x * state['factor']
+
+
+STATE_MULTIPLY = Transformation(TransformationType.NORMALIZATION, multiply_by_state)
+
+
+def state_setter_state_multiply(sample_id):
+    return {'factor': sample_id}
+
+
+
 TMAP_1 = TensorMap(
     'fails_sometimes',
     DD1,
@@ -125,7 +127,6 @@ class TestTensorMap:
         assert tensor_data.ok
         assert tensor_data.data.summary == -2
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=2)
-        assert tensor_data.data.state['factor'] == -1
 
     def test_get_tensor_explore_fail_raw_data(self):
         tensor_data = TMAP_1.get_tensor_explore(2, datetime(year=2000, month=3, day=1), None)
@@ -159,22 +160,22 @@ class TestPipelineSampleGetter:
             PIPE(1)
 
     def test_explore_batch(self):
-        in_batch, out_batch = PIPE.explore_batch(0).data
+        in_batch, out_batch, state = PIPE.explore_batch(0).data
+        assert state['factor'] == 0
 
         tensor_data = in_batch[TMAP_1.input_name]
         assert tensor_data.ok
         assert tensor_data.data.summary == 10
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=1)
-        assert tensor_data.data.state['factor'] == 0
 
         tensor_data = out_batch[TMAP_2.output_name]
         assert tensor_data.ok
         assert tensor_data.data.summary == 0
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=2)
-        assert tensor_data.data.state['factor'] == 0
 
     def test_explore_batch_fails_raw_data(self):
-        in_batch, out_batch = PIPE.explore_batch(2).data
+        in_batch, out_batch, state = PIPE.explore_batch(2).data
+        assert state['factor'] == 2
 
         tensor_data = in_batch[TMAP_1.input_name]
         assert not tensor_data.ok
@@ -184,7 +185,6 @@ class TestPipelineSampleGetter:
         assert tensor_data.ok
         assert tensor_data.data.summary == 20
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=1)
-        assert tensor_data.data.state['factor'] == 2
 
     def test_explore_batch_call_fails_date_select(self):
         result = PIPE.explore_batch(3)
@@ -192,7 +192,8 @@ class TestPipelineSampleGetter:
         assert result.error == 'Selecting dates failed causing error of type NoDTError.'
 
     def test_explore_batch_fails_filter(self):
-        in_batch, out_batch = PIPE.explore_batch(1).data
+        in_batch, out_batch, state = PIPE.explore_batch(1).data
+        assert state['factor'] == 1
 
         tensor_data = in_batch[TMAP_1.input_name]
         assert not tensor_data.ok
@@ -202,4 +203,3 @@ class TestPipelineSampleGetter:
         assert tensor_data.ok
         assert tensor_data.data.summary == 10
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=1)
-        assert tensor_data.data.state['factor'] == 1

@@ -1,10 +1,10 @@
-from typing import List, Dict, Any, Tuple, Callable
+from typing import List, Callable
 from multiprocessing import Pool, cpu_count
 from functools import partial
 
 import pandas as pd
 
-from ml4h.data.defines import SampleID, DateTime, EXCEPTIONS
+from ml4h.data.defines import SampleID, EXCEPTIONS
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import DateSelector
 from ml4h.data.sample_getter import PipelineSampleGetter
@@ -12,7 +12,7 @@ from ml4h.data.sample_getter import PipelineSampleGetter
 
 ERROR_COL = 'error'
 SAMPLE_ID_COL = 'sample_id'
-DATA_DESCRIPTION_COL = 'date_description'
+DATA_DESCRIPTION_COL = 'data_description'
 DT_COL = 'dt'
 STATE_COL = 'state'
 
@@ -29,7 +29,7 @@ def data_description_summarize_sample_id(
     except EXCEPTIONS as e:
         return pd.DataFrame({
             SAMPLE_ID_COL: sample_id,
-            DATA_DESCRIPTION_COL: data_description.__name__,
+            DATA_DESCRIPTION_COL: data_description.name,
             ERROR_COL: type(e).__name__
         })
     out = []
@@ -41,7 +41,7 @@ def data_description_summarize_sample_id(
             summary[ERROR_COL] = type(e).__name__
         out.append(summary)
     out = pd.DataFrame(out)
-    out[DATA_DESCRIPTION_COL] = data_description.__name__
+    out[DATA_DESCRIPTION_COL] = data_description.name
     out[SAMPLE_ID_COL] = sample_id
     return out
 
@@ -110,16 +110,12 @@ def date_selector_summarize_sample_id(
         dts = date_selector.select_dates(sample_id)
     except EXCEPTIONS as e:
         return pd.DataFrame({
-            SAMPLE_ID_COL: sample_id,
-            DATA_DESCRIPTION_COL: date_selector.__name__,
-            ERROR_COL: type(e).__name__
+            SAMPLE_ID_COL: [sample_id],
+            ERROR_COL: [type(e).__name__],
         })
-    out = []
+    out = {}
     for data_description, dt in dts.items():
-        out.append({
-            DATA_DESCRIPTION_COL: data_description.__name__,
-            DT_COL: dt,
-        })
+        out[f'{DATA_DESCRIPTION_COL}_{data_description.name}'] = [dt]
     out = pd.DataFrame(out)
     out[SAMPLE_ID_COL] = sample_id
     return out
@@ -151,16 +147,17 @@ def pipeline_sample_getter_summarize_sample_id(
     explore_batch = sample_getter.explore_batch(sample_id)
     out = {SAMPLE_ID_COL: sample_id}
     if explore_batch.ok:
+        out[STATE_COL] = [explore_batch.data[2]]
         for name, tensor_result in {**explore_batch.data[0], **explore_batch.data[1]}.items():
             if tensor_result.ok:
-                out[f'{name}_summary'] = tensor_result.data.summary
-                out[f'{name}_{DT_COL}'] = tensor_result.data.dt
-                out[f'{name}_{STATE_COL}'] = tensor_result.data.state
+                out[f'{name}_summary'] = [tensor_result.data.summary]
+                out[f'{name}_{DT_COL}'] = [tensor_result.data.dt]
             else:
-                out[f'{name}_{ERROR_COL}'] = tensor_result.error
+                out[f'{name}_{ERROR_COL}'] = [tensor_result.error]
     else:
-        out[ERROR_COL] = explore_batch.error
-    return pd.DataFrame[out]
+        out[ERROR_COL] = [explore_batch.error]
+    out = pd.DataFrame(out)
+    return pd.DataFrame(out)
 
 
 def explore_pipeline_sample_getter(

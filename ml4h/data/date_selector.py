@@ -23,6 +23,10 @@ class DateSelector:
     def select_dates(self, sample_id: SampleID) -> Dict[DataDescription, DateTime]:
         pass
 
+    @property
+    def name(self) -> str:
+        return type(self.__name__)
+
 
 def first_dt(dts: List[DateTime]) -> DateTime:
     return sorted(dts)[0]
@@ -71,4 +75,3 @@ class RangeDateSelector(DateSelector):
             all_dts[data_description] = find_closest_dt(ref_dt, other_dts)
 
         return all_dts
-

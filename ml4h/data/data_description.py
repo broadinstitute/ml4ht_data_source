@@ -50,3 +50,7 @@ class DataDescription:
         It's recommended to override this for large tensors.
         """
         return {'raw_data': self.get_raw_data(sample_id, dt)}
+
+    @property
+    def name(self) -> str:
+        return type(self).__name__

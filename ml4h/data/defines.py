@@ -10,7 +10,6 @@ import numpy as np
 SampleID = int
 DateTime = datetime
 Tensor = np.ndarray
-TensorError = Optional[str]  # an optional failure description for a tensor processing step
 HalfBatch = Dict[str, Tensor]  # the input or output of a batch
 Batch = Tuple[HalfBatch, HalfBatch]  # a batch ready for input into an ML4H model
 SampleGetter = Callable[[SampleID], Batch]  # a function that prepares a batch given a sample id
