@@ -21,7 +21,16 @@ class TensorData:
 
 
 ExploreTensor = Result[TensorData, str]
-ExploreBatch = Result[Tuple[Dict[str, ExploreTensor], Dict[str, ExploreTensor], State], str]
+
+
+@dataclass
+class BatchData:
+    in_batch = Dict[str, ExploreTensor]
+    out_batch = Dict[str, ExploreTensor]
+    state = State
+
+
+ExploreBatch = Result[State, str]
 
 
 @dataclass
