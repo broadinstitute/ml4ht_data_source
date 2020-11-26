@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Callable, Dict, Any, Union, TypeVar, Generic
+from typing import List, Tuple, Callable, Dict, Any, Union
 from enum import Enum
 
 from ml4h.data.data_description import DataDescription
@@ -57,6 +57,13 @@ class Transformation:
     def is_normalization(self) -> bool:
         return self.transformation_type == TransformationType.NORMALIZATION
 
+    @property
+    def name(self) -> str:
+        return f'{self.transformation.__name__}_{self.transformation_type}'
+
+    def __call__(self, tensor: Tensor, dt: DateTime, state: State) -> Tensor:
+        return self.transformation(tensor, dt, state)
+
 
 def format_error(exception: Exception, error_description: str) -> str:
     """
@@ -104,7 +111,7 @@ class TensorMap:
             try:
                 x = transformation(x, dt, state)
             except EXCEPTIONS as e:
-                return ExploreTensor.Error(format_error(e, f'{transformation.__name__} failed'))
+                return ExploreTensor.Error(format_error(e, f'{transformation.name} failed'))
         return ExploreTensor.Data(TensorData(self.summarizer(x), dt, state))
 
     def get_tensor(self, sample_id: SampleID, dt: DateTime, state: State) -> Tensor:

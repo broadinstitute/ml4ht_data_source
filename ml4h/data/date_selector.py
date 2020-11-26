@@ -64,7 +64,7 @@ class RangeDateSelector(DateSelector):
         for data_description in self.other_data_descriptions:
             other_dts = [
                 dt for dt in data_description.get_dates(sample_id)
-                if min_dt < dt < max_dt
+                if min_dt <= dt <= max_dt
             ]
             if not other_dts:
                 raise NoDTError('No dates found.')

@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from datetime import datetime
 from typing import List, Dict, Any
 
 from ml4h.data.defines import SampleID, Tensor, DateTime
