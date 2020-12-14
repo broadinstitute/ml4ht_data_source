@@ -3,11 +3,10 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 
-from ml4h.data.transformation import Transformation, TransformationType
-from ml4h.data.sample_getter import TensorMap, PipelineSampleGetter
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import RangeDateSelector, first_dt
-
+from ml4h.data.sample_getter import PipelineSampleGetter, TensorMap
+from ml4h.data.transformation import Transformation, TransformationType
 
 RAW_DATA_1 = {
     0: {
@@ -52,7 +51,7 @@ class DictionaryDataDescription(DataDescription):
 
     def get_raw_data(self, sample_id, dt):
         if sample_id == self.fail_idx:
-            raise ValueError('Bad sample id.')
+            raise ValueError("Bad sample id.")
         return self.data[sample_id][dt]
 
 
@@ -62,7 +61,7 @@ DD2 = DictionaryDataDescription(RAW_DATA_2, -1)
 
 def error_on_negative(x, _, __):
     if np.any(x <= 0):
-        raise ValueError('Not all values positive.')
+        raise ValueError("Not all values positive.")
     return x
 
 
@@ -70,24 +69,23 @@ FILTER_ALL_POSITIVE = Transformation(TransformationType.FILTER, error_on_negativ
 
 
 def multiply_by_state(x, _, state):
-    return x * state['factor']
+    return x * state["factor"]
 
 
 STATE_MULTIPLY = Transformation(TransformationType.NORMALIZATION, multiply_by_state)
 
 
 def state_setter_state_multiply(sample_id):
-    return {'factor': sample_id}
-
+    return {"factor": sample_id}
 
 
 TMAP_1 = TensorMap(
-    'fails_sometimes',
+    "fails_sometimes",
     DD1,
     [FILTER_ALL_POSITIVE],
 )
 TMAP_2 = TensorMap(
-    'never_fails',
+    "never_fails",
     DD2,
     [STATE_MULTIPLY],
 )
@@ -108,11 +106,10 @@ PIPE = PipelineSampleGetter(
 
 
 class TestTensorMap:
-
     def test_get_tensor(self):
         data = TMAP_1.get_tensor(0, datetime(year=2000, month=3, day=1), None)
         assert data == 10
-        data = TMAP_2.get_tensor(0, datetime(year=2000, month=3, day=2), {'factor': -1})
+        data = TMAP_2.get_tensor(0, datetime(year=2000, month=3, day=2), {"factor": -1})
         assert data == -2
 
     def test_get_tensor_fail_raw_data(self):
@@ -124,24 +121,35 @@ class TestTensorMap:
             TMAP_1.get_tensor(1, datetime(year=2000, month=3, day=1), None)
 
     def test_get_tensor_explore(self):
-        tensor_data = TMAP_2.get_tensor_explore(0, datetime(year=2000, month=3, day=2), {'factor': -1})
+        tensor_data = TMAP_2.get_tensor_explore(
+            0, datetime(year=2000, month=3, day=2), {"factor": -1}
+        )
         assert tensor_data.ok
         assert tensor_data.data.summary == -2
         assert tensor_data.data.dt == datetime(year=2000, month=3, day=2)
 
     def test_get_tensor_explore_fail_raw_data(self):
-        tensor_data = TMAP_1.get_tensor_explore(2, datetime(year=2000, month=3, day=1), None)
+        tensor_data = TMAP_1.get_tensor_explore(
+            2, datetime(year=2000, month=3, day=1), None
+        )
         assert not tensor_data.ok
-        assert tensor_data.error == 'Getting raw data failed causing error of type ValueError.'
+        assert (
+            tensor_data.error
+            == "Getting raw data failed causing error of type ValueError."
+        )
 
     def test_get_tensor_fail_explore_raw_filter(self):
-        tensor_data = TMAP_1.get_tensor_explore(1, datetime(year=2000, month=3, day=1), None)
+        tensor_data = TMAP_1.get_tensor_explore(
+            1, datetime(year=2000, month=3, day=1), None
+        )
         assert not tensor_data.ok
-        assert tensor_data.error == 'error_on_negative_TransformationType.FILTER failed causing error of type ValueError.'
+        assert (
+            tensor_data.error
+            == "error_on_negative_TransformationType.FILTER failed causing error of type ValueError."
+        )
 
 
 class TestPipelineSampleGetter:
-
     def test_call(self):
         in_batch, out_batch = PIPE(0)
         assert in_batch[TMAP_1.input_name] == 10
@@ -162,7 +170,7 @@ class TestPipelineSampleGetter:
 
     def test_explore_batch(self):
         data = PIPE.explore_batch(0).data
-        assert data.state['factor'] == 0
+        assert data.state["factor"] == 0
 
         tensor_data = data.in_batch[TMAP_1.input_name]
         assert tensor_data.ok
@@ -176,11 +184,14 @@ class TestPipelineSampleGetter:
 
     def test_explore_batch_fails_raw_data(self):
         data = PIPE.explore_batch(2).data
-        assert data.state['factor'] == 2
+        assert data.state["factor"] == 2
 
         tensor_data = data.in_batch[TMAP_1.input_name]
         assert not tensor_data.ok
-        assert tensor_data.error == 'Getting raw data failed causing error of type ValueError.'
+        assert (
+            tensor_data.error
+            == "Getting raw data failed causing error of type ValueError."
+        )
 
         tensor_data = data.out_batch[TMAP_2.output_name]
         assert tensor_data.ok
@@ -190,15 +201,18 @@ class TestPipelineSampleGetter:
     def test_explore_batch_call_fails_date_select(self):
         result = PIPE.explore_batch(3)
         assert not result.ok
-        assert result.error == 'Selecting dates failed causing error of type NoDTError.'
+        assert result.error == "Selecting dates failed causing error of type NoDTError."
 
     def test_explore_batch_fails_filter(self):
         data = PIPE.explore_batch(1).data
-        assert data.state['factor'] == 1
+        assert data.state["factor"] == 1
 
         tensor_data = data.in_batch[TMAP_1.input_name]
         assert not tensor_data.ok
-        assert tensor_data.error == 'error_on_negative_TransformationType.FILTER failed causing error of type ValueError.'
+        assert (
+            tensor_data.error
+            == "error_on_negative_TransformationType.FILTER failed causing error of type ValueError."
+        )
 
         tensor_data = data.out_batch[TMAP_2.output_name]
         assert tensor_data.ok

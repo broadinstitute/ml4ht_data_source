@@ -1,9 +1,8 @@
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from ml4h.data.data_description import DataDescription
 from ml4h.data.defines import SampleID, Tensor
-
 
 RAW_DATA = {
     0: {
@@ -28,7 +27,7 @@ class DictionaryDataDescription(DataDescription):
 
     def get_summary_data(self, sample_id: SampleID, dt: datetime) -> Dict[str, Any]:
         summary = super().get_summary_data(sample_id, dt)
-        summary['is_positive'] = summary['raw_data'] > 0
+        summary["is_positive"] = summary["raw_data"] > 0
         return summary
 
 
@@ -51,5 +50,5 @@ def test_get_summary_data():
     for sample_id, date_to_value in RAW_DATA.items():
         for date, value in date_to_value.items():
             summary = ddd.get_summary_data(sample_id, date)
-            assert summary['raw_data'] == value
-            assert summary['is_positive'] == (value > 0)
+            assert summary["raw_data"] == value
+            assert summary["is_positive"] == (value > 0)

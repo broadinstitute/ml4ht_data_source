@@ -1,26 +1,25 @@
-from typing import List, Callable
-from multiprocessing import Pool, cpu_count
 from functools import partial
+from multiprocessing import Pool, cpu_count
+from typing import Callable, List
 
 import pandas as pd
 
-from ml4h.data.defines import SampleID, EXCEPTIONS
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import DateSelector
+from ml4h.data.defines import EXCEPTIONS, SampleID
 from ml4h.data.sample_getter import PipelineSampleGetter
 
-
-ERROR_COL = 'error'
-SAMPLE_ID_COL = 'sample_id'
-DATA_DESCRIPTION_COL = 'data_description'
-DT_COL = 'dt'
-STATE_COL = 'state'
+ERROR_COL = "error"
+SAMPLE_ID_COL = "sample_id"
+DATA_DESCRIPTION_COL = "data_description"
+DT_COL = "dt"
+STATE_COL = "state"
 
 
 def build_df(
-        summarizer: Callable[[SampleID], pd.DataFrame],
-        sample_ids: List[SampleID],
-        multiprocess: bool,
+    summarizer: Callable[[SampleID], pd.DataFrame],
+    sample_ids: List[SampleID],
+    multiprocess: bool,
 ) -> pd.DataFrame:
     """
     Apply a function (summarizer) to a list of sample ids to build a DataFrame
@@ -36,7 +35,7 @@ def build_df(
         dfs = []
         for i, df in enumerate(mapper):
             dfs.append(df)
-            print(f'{(i + 1) // len(sample_ids):.1%} done.', end='\r')
+            print(f"{(i + 1) // len(sample_ids):.1%} done.", end="\r")
     finally:
         if pool is not None:
             pool.close()
@@ -45,7 +44,8 @@ def build_df(
 
 # data description exploration
 def _data_description_summarize_sample_id(
-    sample_id: SampleID, data_description: DataDescription,
+    sample_id: SampleID,
+    data_description: DataDescription,
 ) -> pd.DataFrame:
     """
     Get the summary data for a data description for a single sample id.
@@ -54,11 +54,13 @@ def _data_description_summarize_sample_id(
     try:
         dts = data_description.get_dates(sample_id)
     except EXCEPTIONS as e:
-        return pd.DataFrame({
-            SAMPLE_ID_COL: sample_id,
-            DATA_DESCRIPTION_COL: data_description.name,
-            ERROR_COL: type(e).__name__
-        })
+        return pd.DataFrame(
+            {
+                SAMPLE_ID_COL: sample_id,
+                DATA_DESCRIPTION_COL: data_description.name,
+                ERROR_COL: type(e).__name__,
+            }
+        )
     out = []
     for dt in dts:
         summary = {DT_COL: dt}
@@ -74,7 +76,8 @@ def _data_description_summarize_sample_id(
 
 
 def _data_descriptions_summarize_sample_id(
-        sample_id: SampleID, data_descriptions: List[DataDescription],
+    sample_id: SampleID,
+    data_descriptions: List[DataDescription],
 ) -> pd.DataFrame:
     """
     Get the summary data for a list of DataDescriptions for a single sample id
@@ -83,30 +86,32 @@ def _data_descriptions_summarize_sample_id(
         [
             _data_description_summarize_sample_id(sample_id, data_description)
             for data_description in data_descriptions
-        ]
+        ],
     )
 
 
 def explore_data_descriptions(
-        data_descriptions: List[DataDescription],
-        sample_ids: List[SampleID],
-        multiprocess: bool = False,
+    data_descriptions: List[DataDescription],
+    sample_ids: List[SampleID],
+    multiprocess: bool = False,
 ) -> pd.DataFrame:
     """
     Get summary data of DataDescriptions for a list of sample ids
     """
-    summarize = partial(_data_descriptions_summarize_sample_id, data_descriptions=data_descriptions)
+    summarize = partial(
+        _data_descriptions_summarize_sample_id, data_descriptions=data_descriptions
+    )
     return build_df(
         summarize,
         sample_ids,
-        multiprocess
+        multiprocess,
     )
 
 
 # date selector explore
 def _date_selector_summarize_sample_id(
-        sample_id: SampleID,
-        date_selector: DateSelector,
+    sample_id: SampleID,
+    date_selector: DateSelector,
 ) -> pd.DataFrame:
     """
     Get the dates selected for a single sample id
@@ -114,22 +119,24 @@ def _date_selector_summarize_sample_id(
     try:
         dts = date_selector.select_dates(sample_id)
     except EXCEPTIONS as e:
-        return pd.DataFrame({
-            SAMPLE_ID_COL: [sample_id],
-            ERROR_COL: [type(e).__name__],
-        })
+        return pd.DataFrame(
+            {
+                SAMPLE_ID_COL: [sample_id],
+                ERROR_COL: [type(e).__name__],
+            }
+        )
     out = {}
     for data_description, dt in dts.items():
-        out[f'{DATA_DESCRIPTION_COL}_{data_description.name}'] = [dt]
+        out[f"{DATA_DESCRIPTION_COL}_{data_description.name}"] = [dt]
     out = pd.DataFrame(out)
     out[SAMPLE_ID_COL] = sample_id
     return out
 
 
 def explore_date_selector(
-        date_selector: DateSelector,
-        sample_ids: List[SampleID],
-        multiprocess: bool = False,
+    date_selector: DateSelector,
+    sample_ids: List[SampleID],
+    multiprocess: bool = False,
 ) -> pd.DataFrame:
     """
     Get the dates for each DataDescription from a DateSelector for a list of sample ids
@@ -138,14 +145,14 @@ def explore_date_selector(
     return build_df(
         summarize,
         sample_ids,
-        multiprocess
+        multiprocess,
     )
 
 
 # pipeline sample getter explore
 def _pipeline_sample_getter_summarize_sample_id(
-        sample_id: SampleID,
-        sample_getter: PipelineSampleGetter,
+    sample_id: SampleID,
+    sample_getter: PipelineSampleGetter,
 ) -> pd.DataFrame:
     """
     Get the summary, dates, states or errors from each TensorMap for a sample id
@@ -155,12 +162,15 @@ def _pipeline_sample_getter_summarize_sample_id(
     if explore_batch.ok:
         data = explore_batch.data
         out[STATE_COL] = [data.state]
-        for name, tensor_result in {**data.in_batch, **explore_batch.data.out_batch}.items():
+        for name, tensor_result in {
+            **data.in_batch,
+            **explore_batch.data.out_batch,
+        }.items():
             if tensor_result.ok:
-                out[f'{name}_summary'] = [tensor_result.data.summary]
-                out[f'{name}_{DT_COL}'] = [tensor_result.data.dt]
+                out[f"{name}_summary"] = [tensor_result.data.summary]
+                out[f"{name}_{DT_COL}"] = [tensor_result.data.dt]
             else:
-                out[f'{name}_{ERROR_COL}'] = [tensor_result.error]
+                out[f"{name}_{ERROR_COL}"] = [tensor_result.error]
     else:
         out[ERROR_COL] = [explore_batch.error]
     out = pd.DataFrame(out)
@@ -168,17 +178,19 @@ def _pipeline_sample_getter_summarize_sample_id(
 
 
 def explore_pipeline_sample_getter(
-        pipeline_sample_getter: PipelineSampleGetter,
-        sample_ids: List[SampleID],
-        multiprocess: bool = False,
+    pipeline_sample_getter: PipelineSampleGetter,
+    sample_ids: List[SampleID],
+    multiprocess: bool = False,
 ) -> pd.DataFrame:
     """
     Get the datetime selected,
     """
-    summarize = partial(_pipeline_sample_getter_summarize_sample_id, sample_getter=pipeline_sample_getter)
+    summarize = partial(
+        _pipeline_sample_getter_summarize_sample_id,
+        sample_getter=pipeline_sample_getter,
+    )
     return build_df(
         summarize,
         sample_ids,
-        multiprocess
+        multiprocess,
     )
-

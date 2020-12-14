@@ -1,13 +1,14 @@
 from abc import abstractmethod
-from typing import Dict, List, Callable
 from datetime import timedelta
+from typing import Callable, Dict, List
 
-from ml4h.data.defines import SampleID, DateTime
 from ml4h.data.data_description import DataDescription
+from ml4h.data.defines import DateTime, SampleID
 
 
 class NoDTError(ValueError):
     """Raise when at least one DataDescription has no datetimes for a sample id"""
+
     pass
 
 
@@ -43,13 +44,14 @@ class RangeDateSelector(DateSelector):
     The datetime of the reference DataDescription is chosen using `reference_date_chooser`.
     The other DataDescriptions datetimes are chosen closest to the reference DataDescriptions datetime.
     """
+
     def __init__(
-            self,
-            reference_data_description: DataDescription,
-            reference_date_chooser: Callable[[List[DateTime]], DateTime],
-            other_data_descriptions: List[DataDescription],
-            time_before: timedelta = timedelta(days=0),
-            time_after: timedelta = timedelta(days=0),
+        self,
+        reference_data_description: DataDescription,
+        reference_date_chooser: Callable[[List[DateTime]], DateTime],
+        other_data_descriptions: List[DataDescription],
+        time_before: timedelta = timedelta(days=0),
+        time_after: timedelta = timedelta(days=0),
     ):
         self.reference_data_description = reference_data_description
         self.reference_date_chooser = reference_date_chooser
@@ -67,11 +69,12 @@ class RangeDateSelector(DateSelector):
 
         for data_description in self.other_data_descriptions:
             other_dts = [
-                dt for dt in data_description.get_dates(sample_id)
+                dt
+                for dt in data_description.get_dates(sample_id)
                 if min_dt <= dt <= max_dt
             ]
             if not other_dts:
-                raise NoDTError('No dates found.')
+                raise NoDTError("No dates found.")
             all_dts[data_description] = find_closest_dt(ref_dt, other_dts)
 
         return all_dts

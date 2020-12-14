@@ -1,9 +1,18 @@
 from dataclasses import dataclass
-from typing import List, Tuple, Callable, Dict, Any, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import DateSelector
-from ml4h.data.defines import StateSetter, SampleID, DateTime, State, Tensor, EXCEPTIONS, Batch, HalfBatch
+from ml4h.data.defines import (
+    EXCEPTIONS,
+    Batch,
+    DateTime,
+    HalfBatch,
+    SampleID,
+    State,
+    StateSetter,
+    Tensor,
+)
 from ml4h.data.result import Result
 from ml4h.data.transformation import Transformation
 
@@ -31,7 +40,7 @@ def format_error(exception: Exception, error_description: str) -> str:
     """
     Prepare a descriptive error string for exploration.
     """
-    return f'{error_description} causing error of type {type(exception).__name__}.'
+    return f"{error_description} causing error of type {type(exception).__name__}."
 
 
 class TensorMap:
@@ -39,12 +48,13 @@ class TensorMap:
     Gets raw data using a data description then applies a series of transformations to the raw data.
     Can keep track of errors and filtering during exploration time.
     """
+
     def __init__(
-            self,
-            name: str,
-            data_description: DataDescription,
-            transformations: List[Transformation] = None,
-            summarizer: Callable[[Tensor], Any] = None,
+        self,
+        name: str,
+        data_description: DataDescription,
+        transformations: List[Transformation] = None,
+        summarizer: Callable[[Tensor], Any] = None,
     ):
         self.transformations = transformations or []
         self._data_description = data_description
@@ -60,7 +70,9 @@ class TensorMap:
     def name(self) -> str:
         return self._name
 
-    def get_tensor_explore(self, sample_id: SampleID, dt: DateTime, state: State) -> ExploreTensor:
+    def get_tensor_explore(
+        self, sample_id: SampleID, dt: DateTime, state: State
+    ) -> ExploreTensor:
         """
         For use during exploration.
         Catches errors and returns where they happen in the series of transformations.
@@ -68,12 +80,14 @@ class TensorMap:
         try:
             x = self.data_description.get_raw_data(sample_id, dt)
         except EXCEPTIONS as e:
-            return ExploreTensor.Error(format_error(e, f'Getting raw data failed'))
+            return ExploreTensor.Error(format_error(e, f"Getting raw data failed"))
         for transformation in self.transformations:
             try:
                 x = transformation(x, dt, state)
             except EXCEPTIONS as e:
-                return ExploreTensor.Error(format_error(e, f'{transformation.name} failed'))
+                return ExploreTensor.Error(
+                    format_error(e, f"{transformation.name} failed")
+                )
         return ExploreTensor.Data(TensorData(self.summarizer(x), dt))
 
     def get_tensor(self, sample_id: SampleID, dt: DateTime, state: State) -> Tensor:
@@ -87,11 +101,11 @@ class TensorMap:
 
     @property
     def input_name(self) -> str:
-        return f'input_{self.name}'
+        return f"input_{self.name}"
 
     @property
     def output_name(self) -> str:
-        return f'output_{self.name}'
+        return f"output_{self.name}"
 
 
 class PipelineSampleGetter:
@@ -104,12 +118,13 @@ class PipelineSampleGetter:
     3. Get a dictionary of input tensors from input TensorMaps using the sample id, datetime, state
     4. Get a dictionary of output tensors from input TensorMaps using the sample id, datetime, state
     """
+
     def __init__(
-            self,
-            tensor_maps_in: List[TensorMap],
-            tensor_maps_out: List[TensorMap],
-            date_selector: DateSelector,
-            state_setter: StateSetter = None,
+        self,
+        tensor_maps_in: List[TensorMap],
+        tensor_maps_out: List[TensorMap],
+        date_selector: DateSelector,
+        state_setter: StateSetter = None,
     ):
         self.tensor_maps_in = tensor_maps_in
         self.tensor_maps_out = tensor_maps_out
@@ -117,11 +132,12 @@ class PipelineSampleGetter:
         self.state_setter = state_setter or (lambda sample_id: {})
 
     def _half_batch(
-            self, sample_id: SampleID,
-            dts: Dict[DataDescription, DateTime],
-            state: State,
-            is_input: bool,
-            explore: bool = False,
+        self,
+        sample_id: SampleID,
+        dts: Dict[DataDescription, DateTime],
+        state: State,
+        is_input: bool,
+        explore: bool = False,
     ) -> Union[HalfBatch, Dict[str, ExploreTensor]]:
         half_batch = {}
         tmaps = self.tensor_maps_in if is_input else self.tensor_maps_out
@@ -146,11 +162,11 @@ class PipelineSampleGetter:
         try:
             dts = self.date_selector.select_dates(sample_id)
         except EXCEPTIONS as e:
-            return ExploreBatch.Error(format_error(e, f'Selecting dates failed'))
+            return ExploreBatch.Error(format_error(e, f"Selecting dates failed"))
         try:
             state = self.state_setter(sample_id)
         except EXCEPTIONS as e:
-            return ExploreBatch.Error(format_error(e, f'Setting state failed'))
+            return ExploreBatch.Error(format_error(e, f"Setting state failed"))
 
         tensors_in = self._half_batch(sample_id, dts, state, True, explore=True)
         tensors_out = self._half_batch(sample_id, dts, state, False, explore=True)

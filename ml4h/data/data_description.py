@@ -1,7 +1,7 @@
 from abc import abstractmethod
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
-from ml4h.data.defines import SampleID, Tensor, DateTime
+from ml4h.data.defines import DateTime, SampleID, Tensor
 
 
 class DataDescription:
@@ -49,7 +49,7 @@ class DataDescription:
         Get a summary of the tensor for a sample id and a date for exploration.
         It's recommended to override this for large tensors.
         """
-        return {'raw_data': self.get_raw_data(sample_id, dt)}
+        return {"raw_data": self.get_raw_data(sample_id, dt)}
 
     @property
     def name(self) -> str:

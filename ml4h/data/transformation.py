@@ -1,14 +1,14 @@
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from typing import Callable
 
 from ml4h.data.defines import DateTime, State, Tensor
 
 
 class TransformationType(Enum):
-    FILTER = 'filter'
-    AUGMENTATION = 'augmentation'
-    NORMALIZATION = 'normalization'
+    FILTER = "filter"
+    AUGMENTATION = "augmentation"
+    NORMALIZATION = "normalization"
 
 
 @dataclass
@@ -28,6 +28,7 @@ class Transformation:
 
     filter_all_positive = Transformation(TransformationType.FILTER, error_on_negative)
     """
+
     transformation_type: TransformationType
     transformation: Callable[[Tensor, DateTime, State], Tensor]
 
@@ -45,7 +46,7 @@ class Transformation:
 
     @property
     def name(self) -> str:
-        return f'{self.transformation.__name__}_{self.transformation_type}'
+        return f"{self.transformation.__name__}_{self.transformation_type}"
 
     def __call__(self, tensor: Tensor, dt: DateTime, state: State) -> Tensor:
         return self.transformation(tensor, dt, state)

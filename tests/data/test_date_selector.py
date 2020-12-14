@@ -2,9 +2,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from ml4h.data.date_selector import NoDTError, RangeDateSelector, first_dt
 from ml4h.data.data_description import DataDescription
-
+from ml4h.data.date_selector import NoDTError, RangeDateSelector, first_dt
 
 RAW_DATA_1 = {
     0: {

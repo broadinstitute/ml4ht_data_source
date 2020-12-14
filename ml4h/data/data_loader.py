@@ -2,15 +2,16 @@ from typing import Callable, Dict, List
 
 from torch.utils.data import Dataset
 
-from ml4h.data.defines import SampleID, SampleGetter, Batch
+from ml4h.data.defines import Batch, SampleGetter, SampleID
 
 
 class ML4HDataset(Dataset):
     """A pytorch Dataset compatible with ML4H models"""
+
     def __init__(
-            self,
-            sample_ids: List[SampleID],
-            sample_getter: SampleGetter,
+        self,
+        sample_ids: List[SampleID],
+        sample_getter: SampleGetter,
     ):
         self.sample_getter = sample_getter
         self.sample_ids = sample_ids

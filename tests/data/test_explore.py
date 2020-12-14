@@ -1,24 +1,23 @@
 from datetime import datetime, timedelta
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
 
+from ml4h.data.data_description import DataDescription
+from ml4h.data.date_selector import NoDTError, RangeDateSelector, first_dt
 from ml4h.data.explore import (
+    DATA_DESCRIPTION_COL,
+    DT_COL,
+    ERROR_COL,
+    STATE_COL,
     _data_description_summarize_sample_id,
     _date_selector_summarize_sample_id,
     _pipeline_sample_getter_summarize_sample_id,
     build_df,
-    DT_COL,
-    ERROR_COL,
-    DATA_DESCRIPTION_COL,
-    STATE_COL,
 )
-from ml4h.data.sample_getter import TensorMap, PipelineSampleGetter
-from ml4h.data.data_description import DataDescription
-from ml4h.data.date_selector import RangeDateSelector, first_dt, NoDTError
+from ml4h.data.sample_getter import PipelineSampleGetter, TensorMap
 from ml4h.data.transformation import Transformation, TransformationType
-
 
 RAW_DATA_1 = {
     0: {
@@ -63,12 +62,12 @@ class DictionaryDataDescription(DataDescription):
 
     def get_raw_data(self, sample_id, dt):
         if sample_id == self.fail_idx:
-            raise ValueError('Bad sample id.')
+            raise ValueError("Bad sample id.")
         return self.data[sample_id][dt]
 
     @property
     def name(self) -> str:
-        return f'{super().name}_{self.fail_idx}'
+        return f"{super().name}_{self.fail_idx}"
 
 
 DD1 = DictionaryDataDescription(RAW_DATA_1, 2)
@@ -77,7 +76,7 @@ DD2 = DictionaryDataDescription(RAW_DATA_2, -1)
 
 def error_on_negative(x, _, __):
     if np.any(x <= 0):
-        raise ValueError('Not all values positive.')
+        raise ValueError("Not all values positive.")
     return x
 
 
@@ -85,23 +84,23 @@ FILTER_ALL_POSITIVE = Transformation(TransformationType.FILTER, error_on_negativ
 
 
 def multiply_by_state(x, _, state):
-    return x * state['factor']
+    return x * state["factor"]
 
 
 STATE_MULTIPLY = Transformation(TransformationType.NORMALIZATION, multiply_by_state)
 
 
 def state_setter_state_multiply(sample_id):
-    return {'factor': sample_id}
+    return {"factor": sample_id}
 
 
 TMAP_1 = TensorMap(
-    'fails_sometimes',
+    "fails_sometimes",
     DD1,
     [FILTER_ALL_POSITIVE],
 )
 TMAP_2 = TensorMap(
-    'never_fails',
+    "never_fails",
     DD2,
     [STATE_MULTIPLY],
 )
@@ -122,23 +121,22 @@ PIPE = PipelineSampleGetter(
 
 
 def simple_summary(sample_id):
-    return pd.DataFrame({'sample_id': [sample_id]})
+    return pd.DataFrame({"sample_id": [sample_id]})
 
 
 @pytest.mark.parametrize(
-    'multiprocess',
-    [False, True]
+    "multiprocess",
+    [False, True],
 )
 def test_build_df(multiprocess):
     expected_df = pd.concat(list(map(simple_summary, [0, 1, 2])))
-    df = build_df(simple_summary, [0, 1, 2], multiprocess).sort_values(by='sample_id')
+    df = build_df(simple_summary, [0, 1, 2], multiprocess).sort_values(by="sample_id")
     assert df.equals(expected_df)
 
 
 class TestDataDescriptionSummarizeSampleID:
-
     @pytest.mark.parametrize(
-        'data_description',
+        "data_description",
         [DD1, DD2],
     )
     def test_success(self, data_description):
@@ -146,7 +144,7 @@ class TestDataDescriptionSummarizeSampleID:
         for date, value in data_description.data[0].items():
             row = df[df[DT_COL] == date].iloc[0]
             assert row[DATA_DESCRIPTION_COL] == data_description.name
-            assert row['raw_data'] == value
+            assert row["raw_data"] == value
 
     def test_fail(self):
         data_description = DD1
@@ -154,17 +152,19 @@ class TestDataDescriptionSummarizeSampleID:
         for date, value in data_description.data[0].items():
             row = df[df[DT_COL] == date].iloc[0]
             assert row[DATA_DESCRIPTION_COL] == data_description.name
-            assert row[ERROR_COL] == 'ValueError'
+            assert row[ERROR_COL] == "ValueError"
 
 
 class TestDateSelectorSummarizeSampleID:
-
     def test_success(self):
         df = _date_selector_summarize_sample_id(0, RDS)
         expected_dates = RDS.select_dates(0)
         for data_selector in (DD1, DD2):
             expected_date = pd.to_datetime(expected_dates[data_selector])
-            assert df[f'{DATA_DESCRIPTION_COL}_{data_selector.name}'].iloc[0] == expected_date
+            assert (
+                df[f"{DATA_DESCRIPTION_COL}_{data_selector.name}"].iloc[0]
+                == expected_date
+            )
 
     def test_fail(self):
         df = _date_selector_summarize_sample_id(3, RDS)
@@ -172,13 +172,12 @@ class TestDateSelectorSummarizeSampleID:
 
 
 class TestPipelineSampleGetterSummarizeSampeID:
-
     def test_success(self):
         row = _pipeline_sample_getter_summarize_sample_id(0, PIPE).iloc[0]
         data = PIPE.explore_batch(0).data
         for name, tensor_result in {**data.in_batch, **data.out_batch}.items():
-            assert row[f'{name}_summary'] == tensor_result.data.summary
-            assert row[f'{name}_{DT_COL}'] == tensor_result.data.dt
+            assert row[f"{name}_summary"] == tensor_result.data.summary
+            assert row[f"{name}_{DT_COL}"] == tensor_result.data.dt
         assert row[STATE_COL] == data.state
 
     def test_fail_date_select(self):
@@ -190,7 +189,7 @@ class TestPipelineSampleGetterSummarizeSampeID:
         data = PIPE.explore_batch(1).data
         for name, tensor_result in {**data.in_batch, **data.out_batch}.items():
             if tensor_result.ok:
-                row[f'{name}_summary'] = tensor_result.data.summary
-                row[f'{name}_{DT_COL}'] = tensor_result.data.dt
+                row[f"{name}_summary"] = tensor_result.data.summary
+                row[f"{name}_{DT_COL}"] = tensor_result.data.dt
             else:
-                assert ValueError.__name__ in row[f'{name}_{ERROR_COL}']
+                assert ValueError.__name__ in row[f"{name}_{ERROR_COL}"]

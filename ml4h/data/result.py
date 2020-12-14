@@ -1,21 +1,20 @@
 #  Python implementation of some of rust's "Result" type
-from typing import Optional, TypeVar, Generic
+from typing import Generic, Optional, TypeVar
 
-
-D = TypeVar('D')  # data type variable
-E = TypeVar('E')  # error type variable
+D = TypeVar("D")  # data type variable
+E = TypeVar("E")  # error type variable
 
 
 class Result(Generic[D, E]):
     def __init__(
-            self,
-            data: Optional[D],
-            error: Optional[E],
+        self,
+        data: Optional[D],
+        error: Optional[E],
     ):
         if data is not None and error is not None:
-            raise ValueError('There cannot be data and an error in a Result.')
+            raise ValueError("There cannot be data and an error in a Result.")
         if data is None and error is None:
-            raise ValueError('There must be data or an error in a Result.')
+            raise ValueError("There must be data or an error in a Result.")
         self.data = data
         self.error = error
 
