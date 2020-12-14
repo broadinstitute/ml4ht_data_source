@@ -22,12 +22,6 @@ repos:
   hooks:
     - id: add-trailing-comma
 
-- repo: https://github.com/timothycrosley/isort
-  rev: 5.0.5
-  hooks:
-    - id: isort
-      additional_dependencies: [toml]
-
 -   repo: https://github.com/ambv/black
     rev: 20.8b1
     hooks:
