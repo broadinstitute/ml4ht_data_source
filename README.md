@@ -6,7 +6,7 @@ It makes it easy to load data and model on from different storage formats
 with complex QC and date time selection logic.
 
 ## Library goals
-| The library should be able to                              | Example use case 
+| The library should be able to                              | Example use case
 ------------------------------------------------------------ | -----------------
 | Load data from different storage formats                   | Modeling on MRIs stored in hd5 files named by sample id with labels in a pandas data frame
 | Have clear and easy to use selection of data by sample id  | Selecting a set of patients with a specific condition
