@@ -14,9 +14,10 @@ from ml4h.data.explore import (
     DATA_DESCRIPTION_COL,
     STATE_COL,
 )
-from ml4h.data.sample_getter import Transformation, TensorMap, TransformationType, PipelineSampleGetter
+from ml4h.data.sample_getter import TensorMap, PipelineSampleGetter
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import RangeDateSelector, first_dt, NoDTError
+from ml4h.data.transformation import Transformation, TransformationType
 
 
 RAW_DATA_1 = {

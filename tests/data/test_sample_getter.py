@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 
-from ml4h.data.sample_getter import Transformation, TensorMap, TransformationType, PipelineSampleGetter
+from ml4h.data.transformation import Transformation, TransformationType
+from ml4h.data.sample_getter import TensorMap, PipelineSampleGetter
 from ml4h.data.data_description import DataDescription
 from ml4h.data.date_selector import RangeDateSelector, first_dt
 

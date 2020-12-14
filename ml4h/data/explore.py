@@ -65,6 +65,9 @@ def build_df(
         sample_ids: List[SampleID],
         multiprocess: bool,
 ) -> pd.DataFrame:
+    """
+    Apply a function (summarizer) to a list of sample ids to build a DataFrame
+    """
     pool = None
     try:
         if multiprocess:
