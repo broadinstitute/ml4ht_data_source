@@ -71,7 +71,10 @@ class TensorMap:
         return self._name
 
     def get_tensor_explore(
-        self, sample_id: SampleID, dt: DateTime, state: State
+        self,
+        sample_id: SampleID,
+        dt: DateTime,
+        state: State,
     ) -> ExploreTensor:
         """
         For use during exploration.
@@ -86,7 +89,7 @@ class TensorMap:
                 x = transformation(x, dt, state)
             except EXCEPTIONS as e:
                 return ExploreTensor.Error(
-                    format_error(e, f"{transformation.name} failed")
+                    format_error(e, f"{transformation.name} failed"),
                 )
         return ExploreTensor.Data(TensorData(self.summarizer(x), dt))
 

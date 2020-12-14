@@ -59,7 +59,7 @@ def _data_description_summarize_sample_id(
                 SAMPLE_ID_COL: sample_id,
                 DATA_DESCRIPTION_COL: data_description.name,
                 ERROR_COL: type(e).__name__,
-            }
+            },
         )
     out = []
     for dt in dts:
@@ -99,7 +99,8 @@ def explore_data_descriptions(
     Get summary data of DataDescriptions for a list of sample ids
     """
     summarize = partial(
-        _data_descriptions_summarize_sample_id, data_descriptions=data_descriptions
+        _data_descriptions_summarize_sample_id,
+        data_descriptions=data_descriptions,
     )
     return build_df(
         summarize,
@@ -123,7 +124,7 @@ def _date_selector_summarize_sample_id(
             {
                 SAMPLE_ID_COL: [sample_id],
                 ERROR_COL: [type(e).__name__],
-            }
+            },
         )
     out = {}
     for data_description, dt in dts.items():

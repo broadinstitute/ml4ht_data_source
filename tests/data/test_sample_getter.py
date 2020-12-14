@@ -122,7 +122,9 @@ class TestTensorMap:
 
     def test_get_tensor_explore(self):
         tensor_data = TMAP_2.get_tensor_explore(
-            0, datetime(year=2000, month=3, day=2), {"factor": -1}
+            0,
+            datetime(year=2000, month=3, day=2),
+            {"factor": -1},
         )
         assert tensor_data.ok
         assert tensor_data.data.summary == -2
@@ -130,7 +132,9 @@ class TestTensorMap:
 
     def test_get_tensor_explore_fail_raw_data(self):
         tensor_data = TMAP_1.get_tensor_explore(
-            2, datetime(year=2000, month=3, day=1), None
+            2,
+            datetime(year=2000, month=3, day=1),
+            None,
         )
         assert not tensor_data.ok
         assert (
@@ -140,7 +144,9 @@ class TestTensorMap:
 
     def test_get_tensor_fail_explore_raw_filter(self):
         tensor_data = TMAP_1.get_tensor_explore(
-            1, datetime(year=2000, month=3, day=1), None
+            1,
+            datetime(year=2000, month=3, day=1),
+            None,
         )
         assert not tensor_data.ok
         assert (
