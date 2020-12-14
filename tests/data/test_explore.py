@@ -5,9 +5,9 @@ import pandas as pd
 import numpy as np
 
 from ml4h.data.explore import (
-    data_description_summarize_sample_id,
-    date_selector_summarize_sample_id,
-    pipeline_sample_getter_summarize_sample_id,
+    _data_description_summarize_sample_id,
+    _date_selector_summarize_sample_id,
+    _pipeline_sample_getter_summarize_sample_id,
     build_df,
     DT_COL,
     ERROR_COL,
@@ -142,7 +142,7 @@ class TestDataDescriptionSummarizeSampleID:
         [DD1, DD2],
     )
     def test_success(self, data_description):
-        df = data_description_summarize_sample_id(0, data_description)
+        df = _data_description_summarize_sample_id(0, data_description)
         for date, value in data_description.data[0].items():
             row = df[df[DT_COL] == date].iloc[0]
             assert row[DATA_DESCRIPTION_COL] == data_description.name
@@ -150,7 +150,7 @@ class TestDataDescriptionSummarizeSampleID:
 
     def test_fail(self):
         data_description = DD1
-        df = data_description_summarize_sample_id(2, data_description)
+        df = _data_description_summarize_sample_id(2, data_description)
         for date, value in data_description.data[0].items():
             row = df[df[DT_COL] == date].iloc[0]
             assert row[DATA_DESCRIPTION_COL] == data_description.name
@@ -160,21 +160,21 @@ class TestDataDescriptionSummarizeSampleID:
 class TestDateSelectorSummarizeSampleID:
 
     def test_success(self):
-        df = date_selector_summarize_sample_id(0, RDS)
+        df = _date_selector_summarize_sample_id(0, RDS)
         expected_dates = RDS.select_dates(0)
         for data_selector in (DD1, DD2):
             expected_date = pd.to_datetime(expected_dates[data_selector])
             assert df[f'{DATA_DESCRIPTION_COL}_{data_selector.name}'].iloc[0] == expected_date
 
     def test_fail(self):
-        df = date_selector_summarize_sample_id(3, RDS)
+        df = _date_selector_summarize_sample_id(3, RDS)
         assert df[ERROR_COL].iloc[0] == NoDTError.__name__
 
 
 class TestPipelineSampleGetterSummarizeSampeID:
 
     def test_success(self):
-        row = pipeline_sample_getter_summarize_sample_id(0, PIPE).iloc[0]
+        row = _pipeline_sample_getter_summarize_sample_id(0, PIPE).iloc[0]
         data = PIPE.explore_batch(0).data
         for name, tensor_result in {**data.in_batch, **data.out_batch}.items():
             assert row[f'{name}_summary'] == tensor_result.data.summary
@@ -182,11 +182,11 @@ class TestPipelineSampleGetterSummarizeSampeID:
         assert row[STATE_COL] == data.state
 
     def test_fail_date_select(self):
-        row = pipeline_sample_getter_summarize_sample_id(3, PIPE).iloc[0]
+        row = _pipeline_sample_getter_summarize_sample_id(3, PIPE).iloc[0]
         assert NoDTError.__name__ in row[ERROR_COL]
 
     def test_fail_one_tmap(self):
-        row = pipeline_sample_getter_summarize_sample_id(2, PIPE).iloc[0]
+        row = _pipeline_sample_getter_summarize_sample_id(2, PIPE).iloc[0]
         data = PIPE.explore_batch(1).data
         for name, tensor_result in {**data.in_batch, **data.out_batch}.items():
             if tensor_result.ok:

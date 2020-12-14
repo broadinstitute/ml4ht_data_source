@@ -17,7 +17,34 @@ DT_COL = 'dt'
 STATE_COL = 'state'
 
 
-def data_description_summarize_sample_id(
+def build_df(
+        summarizer: Callable[[SampleID], pd.DataFrame],
+        sample_ids: List[SampleID],
+        multiprocess: bool,
+) -> pd.DataFrame:
+    """
+    Apply a function (summarizer) to a list of sample ids to build a DataFrame
+    """
+    pool = None
+    try:
+        if multiprocess:
+            pool = Pool(cpu_count())
+            mapper = pool.imap_unordered(summarizer, sample_ids)
+        else:
+            mapper = map(summarizer, sample_ids)
+
+        dfs = []
+        for i, df in enumerate(mapper):
+            dfs.append(df)
+            print(f'{(i + 1) // len(sample_ids):.1%} done.', end='\r')
+    finally:
+        if pool is not None:
+            pool.close()
+    return pd.concat(dfs)
+
+
+# data description exploration
+def _data_description_summarize_sample_id(
     sample_id: SampleID, data_description: DataDescription,
 ) -> pd.DataFrame:
     """
@@ -46,7 +73,7 @@ def data_description_summarize_sample_id(
     return out
 
 
-def data_descriptions_summarize_sample_id(
+def _data_descriptions_summarize_sample_id(
         sample_id: SampleID, data_descriptions: List[DataDescription],
 ) -> pd.DataFrame:
     """
@@ -54,36 +81,10 @@ def data_descriptions_summarize_sample_id(
     """
     return pd.concat(
         [
-            data_description_summarize_sample_id(sample_id, data_description)
+            _data_description_summarize_sample_id(sample_id, data_description)
             for data_description in data_descriptions
         ]
     )
-
-
-def build_df(
-        summarizer: Callable[[SampleID], pd.DataFrame],
-        sample_ids: List[SampleID],
-        multiprocess: bool,
-) -> pd.DataFrame:
-    """
-    Apply a function (summarizer) to a list of sample ids to build a DataFrame
-    """
-    pool = None
-    try:
-        if multiprocess:
-            pool = Pool(cpu_count())
-            mapper = pool.imap_unordered(summarizer, sample_ids)
-        else:
-            mapper = map(summarizer, sample_ids)
-
-        dfs = []
-        for i, df in enumerate(mapper):
-            dfs.append(df)
-            print(f'{(i + 1) // len(sample_ids):.1%} done.', end='\r')
-    finally:
-        if pool is not None:
-            pool.close()
-    return pd.concat(dfs)
 
 
 def explore_data_descriptions(
@@ -94,7 +95,7 @@ def explore_data_descriptions(
     """
     Get summary data of DataDescriptions for a list of sample ids
     """
-    summarize = partial(data_descriptions_summarize_sample_id, data_descriptions=data_descriptions)
+    summarize = partial(_data_descriptions_summarize_sample_id, data_descriptions=data_descriptions)
     return build_df(
         summarize,
         sample_ids,
@@ -102,7 +103,8 @@ def explore_data_descriptions(
     )
 
 
-def date_selector_summarize_sample_id(
+# date selector explore
+def _date_selector_summarize_sample_id(
         sample_id: SampleID,
         date_selector: DateSelector,
 ) -> pd.DataFrame:
@@ -132,7 +134,7 @@ def explore_date_selector(
     """
     Get the dates for each DataDescription from a DateSelector for a list of sample ids
     """
-    summarize = partial(date_selector_summarize_sample_id, date_selector=date_selector)
+    summarize = partial(_date_selector_summarize_sample_id, date_selector=date_selector)
     return build_df(
         summarize,
         sample_ids,
@@ -140,7 +142,8 @@ def explore_date_selector(
     )
 
 
-def pipeline_sample_getter_summarize_sample_id(
+# pipeline sample getter explore
+def _pipeline_sample_getter_summarize_sample_id(
         sample_id: SampleID,
         sample_getter: PipelineSampleGetter,
 ) -> pd.DataFrame:
@@ -172,7 +175,7 @@ def explore_pipeline_sample_getter(
     """
     Get the datetime selected,
     """
-    summarize = partial(pipeline_sample_getter_summarize_sample_id, sample_getter=pipeline_sample_getter)
+    summarize = partial(_pipeline_sample_getter_summarize_sample_id, sample_getter=pipeline_sample_getter)
     return build_df(
         summarize,
         sample_ids,
