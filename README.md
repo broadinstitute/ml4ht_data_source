@@ -2,7 +2,7 @@
 `torch_ml4h` is a library that allows you to streamline the process
 of modeling multi-modal health data.
 
-It makes it easy to load data and model on from different storage formats
+It makes it easy to load and model on data from different storage formats
 with complex QC and date time selection logic.
 
 ## Library goals
