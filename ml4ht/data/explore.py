@@ -4,10 +4,10 @@ from typing import Callable, List
 
 import pandas as pd
 
-from ml4h.data.data_description import DataDescription
-from ml4h.data.date_selector import DateSelector
-from ml4h.data.defines import EXCEPTIONS, SampleID
-from ml4h.data.sample_getter import PipelineSampleGetter
+from ml4ht.data.data_description import DataDescription
+from ml4ht.data.date_selector import DateSelector
+from ml4ht.data.defines import EXCEPTIONS, SampleID
+from ml4ht.data.sample_getter import PipelineSampleGetter
 
 ERROR_COL = "error"
 SAMPLE_ID_COL = "sample_id"

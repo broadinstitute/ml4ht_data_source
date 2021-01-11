@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Tuple, Union
 
-from ml4h.data.data_description import DataDescription
-from ml4h.data.date_selector import DateSelector
-from ml4h.data.defines import (
+from ml4ht.data.data_description import DataDescription
+from ml4ht.data.date_selector import DateSelector
+from ml4ht.data.defines import (
     EXCEPTIONS,
     Batch,
     DateTime,
@@ -13,8 +13,8 @@ from ml4h.data.defines import (
     StateSetter,
     Tensor,
 )
-from ml4h.data.result import Result
-from ml4h.data.transformation import Transformation
+from ml4ht.data.result import Result
+from ml4ht.data.transformation import Transformation
 
 
 @dataclass

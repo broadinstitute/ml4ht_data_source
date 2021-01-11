@@ -3,10 +3,10 @@ from datetime import datetime, timedelta
 import numpy as np
 import pytest
 
-from ml4h.data.data_description import DataDescription
-from ml4h.data.date_selector import RangeDateSelector, first_dt
-from ml4h.data.sample_getter import PipelineSampleGetter, TensorMap
-from ml4h.data.transformation import Transformation, TransformationType
+from ml4ht.data.data_description import DataDescription
+from ml4ht.data.date_selector import RangeDateSelector, first_dt
+from ml4ht.data.sample_getter import PipelineSampleGetter, TensorMap
+from ml4ht.data.transformation import Transformation, TransformationType
 
 RAW_DATA_1 = {
     0: {

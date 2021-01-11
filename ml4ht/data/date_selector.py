@@ -2,8 +2,8 @@ from abc import abstractmethod
 from datetime import timedelta
 from typing import Callable, Dict, List
 
-from ml4h.data.data_description import DataDescription
-from ml4h.data.defines import DateTime, SampleID
+from ml4ht.data.data_description import DataDescription
+from ml4ht.data.defines import DateTime, SampleID
 
 
 class NoDTError(ValueError):
