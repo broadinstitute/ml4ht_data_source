@@ -1,6 +1,6 @@
 import pytest
 
-from ml4h.data.transformation import Transformation, TransformationType
+from ml4ht.data.transformation import Transformation, TransformationType
 
 
 def test_is_augmentation():

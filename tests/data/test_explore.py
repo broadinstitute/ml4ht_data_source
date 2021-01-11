@@ -4,9 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from ml4h.data.data_description import DataDescription
-from ml4h.data.date_selector import NoDTError, RangeDateSelector, first_dt
-from ml4h.data.explore import (
+from ml4ht.data.data_description import DataDescription
+from ml4ht.data.date_selector import NoDTError, RangeDateSelector, first_dt
+from ml4ht.data.explore import (
     DATA_DESCRIPTION_COL,
     DT_COL,
     ERROR_COL,
@@ -16,8 +16,8 @@ from ml4h.data.explore import (
     _pipeline_sample_getter_summarize_sample_id,
     build_df,
 )
-from ml4h.data.sample_getter import PipelineSampleGetter, TensorMap
-from ml4h.data.transformation import Transformation, TransformationType
+from ml4ht.data.sample_getter import PipelineSampleGetter, TensorMap
+from ml4ht.data.transformation import Transformation, TransformationType
 
 RAW_DATA_1 = {
     0: {

@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Any, Dict, List
 
-from ml4h.data.data_description import DataDescription
-from ml4h.data.defines import SampleID, Tensor
+from ml4ht.data.data_description import DataDescription
+from ml4ht.data.defines import SampleID, Tensor
 
 RAW_DATA = {
     0: {

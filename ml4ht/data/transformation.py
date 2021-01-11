@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Callable
 
-from ml4h.data.defines import DateTime, State, Tensor
+from ml4ht.data.defines import DateTime, State, Tensor
 
 
 class TransformationType(Enum):

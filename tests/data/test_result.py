@@ -1,6 +1,6 @@
 import pytest
 
-from ml4h.data.result import Result
+from ml4ht.data.result import Result
 
 
 def test_ok():

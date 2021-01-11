@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Any, Dict, List
 
-from ml4h.data.defines import DateTime, SampleID, Tensor
+from ml4ht.data.defines import DateTime, SampleID, Tensor
 
 
 class DataDescription:

@@ -1,8 +1,8 @@
 import numpy as np
 from torch.utils.data import DataLoader
 
-from ml4h.data.data_loader import ML4HDataset, numpy_collate_fn
-from ml4h.data.defines import Batch
+from ml4ht.data.data_loader import ML4HDataset, numpy_collate_fn
+from ml4ht.data.defines import Batch
 
 
 def sample_getter(sample_id: int) -> Batch:

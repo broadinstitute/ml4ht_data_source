@@ -85,7 +85,7 @@ ML4H models expect batches of data of format:
 You can see the expected python type of a batch is in [`defines.py`](./defines.py).
 
 ## Do it yourself
-The most direct way to get data for a ml4h neural network to train on is to define a `SampleGetter`.
+The most direct way to get data for a ml4ht neural network to train on is to define a `SampleGetter`.
 A `SampleGetter` takes a sample id and returns an input dictionary and output dictionary.
 Given a `SampleGetter`, you get a `pytorch` dataset using [`data_loader.py`](./data_loader.py).
 
