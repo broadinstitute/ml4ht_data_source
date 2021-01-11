@@ -6,7 +6,7 @@ from ml4h.data.defines import Batch
 
 
 def sample_getter(sample_id: int) -> Batch:
-    return {'in': np.full((3, 3), sample_id)}, {'out': np.full((1,), sample_id)}
+    return {"in": np.full((3, 3), sample_id)}, {"out": np.full((1,), sample_id)}
 
 
 dataset = ML4HDataset(list(range(100)), sample_getter)
@@ -15,7 +15,9 @@ dataset = ML4HDataset(list(range(100)), sample_getter)
 def test_numpy_data_loader():
     """does numpy_collate_fn correctly stack batch data"""
     batch_size = 5
-    data_loader = DataLoader(dataset, batch_size=batch_size, collate_fn=numpy_collate_fn)
+    data_loader = DataLoader(
+        dataset, batch_size=batch_size, collate_fn=numpy_collate_fn
+    )
     for i, (actual_in, actual_out) in enumerate(data_loader):
         for j in range(batch_size):
             expected_in, expected_out = sample_getter(i * batch_size + j)
