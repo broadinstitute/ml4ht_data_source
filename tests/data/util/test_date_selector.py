@@ -3,7 +3,12 @@ from datetime import datetime, timedelta
 import pytest
 
 from ml4ht.data.data_description import DataDescription
-from ml4ht.data.date_selector import NoDTError, RangeDateSelector, first_dt
+from ml4ht.data.util.date_selector import (
+    NoDTError,
+    RangeDateSelector,
+    first_dt,
+    DATE_OPTION_KEY,
+)
 
 RAW_DATA_1 = {
     0: {
@@ -24,10 +29,11 @@ class DictionaryDataDescription(DataDescription):
     def __init__(self, data):
         self.data = data
 
-    def get_dates(self, sample_id):
-        return list(self.data[sample_id])
+    def get_loading_options(self, sample_id):
+        return [{DATE_OPTION_KEY: dt} for dt in self.data[sample_id]]
 
-    def get_raw_data(self, sample_id, dt):
+    def get_raw_data(self, sample_id, loading_option):
+        dt = loading_option[DATE_OPTION_KEY]
         return self.data[sample_id][dt]
 
 
@@ -43,9 +49,13 @@ def test_select_range_forward():
         time_before=timedelta(days=0),
         time_after=timedelta(days=5),
     )
-    dts = rds.select_dates(0)
-    assert dts[DD1] == datetime(year=2000, month=3, day=1)
-    assert dts[DD2] == datetime(year=2000, month=3, day=2)
+    loading_options = {
+        DD1: DD1.get_loading_options(0),
+        DD2: DD2.get_loading_options(0),
+    }
+    dts = rds(0, loading_options)
+    assert dts[DD1][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=1)
+    assert dts[DD2][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=2)
 
 
 def test_select_range_backward():
@@ -56,9 +66,13 @@ def test_select_range_backward():
         time_before=timedelta(days=5),
         time_after=timedelta(days=0),
     )
-    dts = rds.select_dates(0)
-    assert dts[DD1] == datetime(year=2000, month=3, day=1)
-    assert dts[DD2] == datetime(year=2000, month=2, day=29)
+    loading_options = {
+        DD1: DD1.get_loading_options(0),
+        DD2: DD2.get_loading_options(0),
+    }
+    dts = rds(0, loading_options)
+    assert dts[DD1][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=1)
+    assert dts[DD2][DATE_OPTION_KEY] == datetime(year=2000, month=2, day=29)
 
 
 def test_select_range_no_dates():
@@ -69,5 +83,9 @@ def test_select_range_no_dates():
         time_before=timedelta(days=0),
         time_after=timedelta(days=0),
     )
+    loading_options = {
+        DD1: DD1.get_loading_options(0),
+        DD2: DD2.get_loading_options(0),
+    }
     with pytest.raises(NoDTError):
-        rds.select_dates(0)
+        rds(0, loading_options)

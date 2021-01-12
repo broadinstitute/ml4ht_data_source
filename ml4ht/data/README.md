@@ -1,22 +1,28 @@
 # Data
 
 The [data module](.) provides to main functionalities
-1. [Data exploration](#exploration)
+1. [Data exploration](./explore.py)
 2. [Data loading for neural network training](#loading-data-for-modeling)
 
+In order to use the exploration functionality, (and other useful utilities, like datetime handling),
+you implement the `DataDescription` class.
 
-# Exploration
+# Data loading using `DataDescription`s
 Preparing data for modeling has a few phases, all of which you can explore using [`explore`](./explore.py).
-1. [Define how to access the raw data](#datadescription)
-2. [Choose which dates to use](#dateselector)
-2. [Apply filters and transformations to the raw data at the selected dates](#pipelinesamplegetter)
+1. [Define how to load data](#datadescription)
+2. [Pick which loading options to use](#optionpicker)
+3. [Model loading](#optionpicker)
 
 ## DataDescription
 [DataDescription](./data_description.py) defines how you access raw data from a storage format.
 In order to use it, you implement the abstract methods of `DataDescription`.
 Those are
-* `get_dates`: given a sample id, what date times are available
-* `get_raw_data`: given a date and sample id, what is the raw data
+* `get_loading_options`: given a sample id, what loading options are available. Examples include:
+    * Which dates data is available at
+    * Which slices of an MRI are available
+* `get_raw_data`: given a sample id and loading options, what is the raw data. Using the previous examples:
+    * Given a sample id and a date, load an ECG for that date
+    * Given a sample id and the slice index of, load a slice of an MRI
 
 You can also optionally provide a name for your storage format by overriding `name`.
 When you explore a `DataDescription`, you can override `get_summary_data`.
@@ -24,44 +30,22 @@ When you explore a `DataDescription`, you can override `get_summary_data`.
 mapping column names to what ever summary information you want from that raw data.
 
 Once you have implemented `DataDescription`, you can explore it using `explore.explore_data_descriptions`.
-Given a list of sample ids, it will give you the summary data for each sample id and date.
+Given a list of sample ids, it will give you the summary data for each sample id and loading option.
 
-## DateSelector
-[DateSelector](./date_selector.py) defines which dates to use from each sample id
-for a set of `DataDescriptions`.
-For example, you may want to select the first available data from each storage format.
-In order to use `DateSelector`, you must override its abstract method
-* select_dates: given a sample id, provide a date time for each `DataDescription` you want to use
+## OptionPicker
+Often which loading options you pick are interdependent.
+For example, if you pick slice 5 of an MRI to segment,
+then you also want to pick slice 5 from the segmentation mask.
 
-You can get one epoch of selected dates and find errors in your date selector using `explore.explore_date_selector`.
+To manage interdependencies between loading options, you use an `OptionPicker`.
+An option picker gets all of the available loading options for a set of `DataDescriptions`,
+and decides which option to use for each.
 
-## PipelineSampleGetter
-Once you have working `DataDescription`s and a `DateSelector`,
+## DataDescriptionSampleGetter
+Once you have working `DataDescription`s and an `OptionPicker`,
 you can combine them to make a full data pipeline which can be used for modeling,
-called a `PipelineSampleGetter`.
-
-`PipelineSampleGetter` is in [`sample_getter.py`](./sample_getter.py).
-It allows you read raw data, select which dates to use,
-and apply filters and transformations to the selected data.
-
-Each input and output for your modeling task will be defined by a `TensorMap`.
-A `TensorMap` takes a `DataDescription`
-and a list of [`Transformations`](./transformation.py) to apply in order to that data.
-The `Transformations` get access to the tensor data as a numpy array, the date time,
-and a state shared across all `TensorMap`s for the current sample id.
-A `TensorMap` can also use a summary function for exploration.
-
-The state shared across `TensorMap`s is set by a `StateSetter`,
-which is just a function that takes a sample id, and returns a dictionary
-mapping strings to whatever you want to use as state.
-For example, `StateSetter` can be used to randomly select the same parts of an image
-for the input and outputs of a segmentation model.
-
-Once you combine input and output `TensorMaps` with a `DateSelector`
-and an optional `StateSetter`, you have a `PipelineSampleGetter`.
-You can find where errors happen and get summary data using
-`explore_pipeline_sample_getter`.
-
+called a `DataDescriptionSampleGetter`.
+`DataDescriptionSampleGetter` is in [`sample_getter.py`](./sample_getter.py).
 
 # Loading Data for Modeling
 The point of the data loading utility is to efficiently generate data in the format ML4H models require.
@@ -97,8 +81,8 @@ def mnist_sample_getter(sample_id):
     return {'image': mnist_image}, {'digit': mnist_label}
 ```
 
-## Using `PipelineSampleGetter`
-If you want to train your model on the data you explore, [`PipelineSampleGetter`](#pipelinesamplegetter)
+## Using `DataDescriptionSampleGetter`
+If you want to train your model on the data you explore, [`DataDescriptionSampleGetter`](#pipelinesamplegetter)
 is a valid `SampleGetter`, so it can be directly used in the data loading utilities.
-Make sure you've explored your `PipelineSampleGetter` so that there are no sample ids
+Make sure you've explored your `DataDescriptionSampleGetter` so that there are no sample ids
 in your data that cause errors at runtime.

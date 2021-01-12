@@ -1,55 +1,49 @@
 from abc import abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from ml4ht.data.defines import DateTime, SampleID, Tensor
+from ml4ht.data.defines import SampleID, Tensor, LoadingOption
 
 
 class DataDescription:
     """
-    Describes a storage format of tensors.
-    Each tensor should be associated with a sample id and a datetime.
-
-    Example:
-    class DictionaryDataDescription(DataDescription):
-        def __init__(self):
-            self.raw_data = {
-                0: {
-                    datetime(year=2000, month=3, day=1): 10,
-                    datetime(year=2000, month=3, day=10): -1,
-                },
-                1: {
-                    datetime(year=2020, month=12, day=25): 3,
-                },
-            }
-
-        def get_dates(self, sample_id: SampleID) -> List[datetime]:
-            return list(self.raw_data[sample_id])
-
-        def get_raw_data(self, sample_id: SampleID, dt: datetime) -> Tensor:
-            return self.raw_data[sample_id][dt]
-
-        def get_summary_data(self, sample_id: SampleID, dt: datetime) -> Dict[str, Any]:
-            summary = super().get_summary_data(sample_id, dt)
-            summary['is_positive'] = summary['raw_data'] > 0
-            return summary
+    Describes how to load data from a storage format of tensor data.
+    Each tensor should be associated with a sample id and specific loading options.
+    For an example, see tests/data/test_data_description.py
     """
 
-    @abstractmethod
-    def get_dates(self, sample_id: SampleID) -> List[DateTime]:
-        """Get all of the dates for one sample id"""
+    def get_loading_options(self, sample_id: SampleID) -> Optional[List[LoadingOption]]:
+        """
+        Get all of the loading options for one sample id
+        Loading options might be
+        * the available date-times for a sample id
+        * which slice of an MRI to use
+        * a random seed to use for warping an image and its segmentation
+
+        In the case where there are a huge number of available options,
+        for example picking a random seed,
+        you can just return a representative sample of them for use in exploration.
+        """
         pass
 
     @abstractmethod
-    def get_raw_data(self, sample_id: SampleID, dt: DateTime) -> Tensor:
-        """How to load a tensor given a sample id and a date"""
+    def get_raw_data(
+        self,
+        sample_id: SampleID,
+        loading_option: LoadingOption,
+    ) -> Tensor:
+        """How to load a tensor given a sample id and a loading option"""
         pass
 
-    def get_summary_data(self, sample_id: SampleID, dt: DateTime) -> Dict[str, Any]:
+    def get_summary_data(
+        self,
+        sample_id: SampleID,
+        loading_option: LoadingOption,
+    ) -> Dict[str, Any]:
         """
         Get a summary of the tensor for a sample id and a date for exploration.
         It's recommended to override this for large tensors.
         """
-        return {"raw_data": self.get_raw_data(sample_id, dt)}
+        return {"raw_data": self.get_raw_data(sample_id, loading_option)}
 
     @property
     def name(self) -> str:

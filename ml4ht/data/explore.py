@@ -5,15 +5,13 @@ from typing import Callable, List
 import pandas as pd
 
 from ml4ht.data.data_description import DataDescription
-from ml4ht.data.date_selector import DateSelector
-from ml4ht.data.defines import EXCEPTIONS, SampleID
-from ml4ht.data.sample_getter import PipelineSampleGetter
+from ml4ht.data.defines import EXCEPTIONS, SampleID, SampleGetter
+from ml4ht.data.sample_getter import DataDescriptionSampleGetter
 
 ERROR_COL = "error"
 SAMPLE_ID_COL = "sample_id"
 DATA_DESCRIPTION_COL = "data_description"
-DT_COL = "dt"
-STATE_COL = "state"
+LOADING_OPTION_COL = "state"
 
 
 def build_df(
@@ -39,7 +37,15 @@ def build_df(
     finally:
         if pool is not None:
             pool.close()
-    return pd.concat(dfs)
+    df = pd.concat(dfs)
+
+    if ERROR_COL not in df:  # in case there are no errors, add an empty error column
+        df[ERROR_COL] = None
+    return df
+
+
+def _format_exception(exception: Exception) -> str:
+    return repr(exception)
 
 
 # data description exploration
@@ -52,22 +58,25 @@ def _data_description_summarize_sample_id(
     Catches and records errors.
     """
     try:
-        dts = data_description.get_dates(sample_id)
+        loading_options = data_description.get_loading_options(sample_id)
     except EXCEPTIONS as e:
         return pd.DataFrame(
             {
                 SAMPLE_ID_COL: sample_id,
                 DATA_DESCRIPTION_COL: data_description.name,
-                ERROR_COL: type(e).__name__,
+                ERROR_COL: _format_exception(e),
             },
         )
     out = []
-    for dt in dts:
-        summary = {DT_COL: dt}
+    for loading_options in loading_options:
+        summary = loading_options
         try:
-            summary = {**summary, **data_description.get_summary_data(sample_id, dt)}
+            summary = {
+                **summary,
+                **data_description.get_summary_data(sample_id, loading_options),
+            }
         except EXCEPTIONS as e:
-            summary[ERROR_COL] = type(e).__name__
+            summary[ERROR_COL] = _format_exception(e)
         out.append(summary)
     out = pd.DataFrame(out)
     out[DATA_DESCRIPTION_COL] = data_description.name
@@ -109,77 +118,34 @@ def explore_data_descriptions(
     )
 
 
-# date selector explore
-def _date_selector_summarize_sample_id(
-    sample_id: SampleID,
-    date_selector: DateSelector,
-) -> pd.DataFrame:
-    """
-    Get the dates selected for a single sample id
-    """
-    try:
-        dts = date_selector.select_dates(sample_id)
-    except EXCEPTIONS as e:
-        return pd.DataFrame(
-            {
-                SAMPLE_ID_COL: [sample_id],
-                ERROR_COL: [type(e).__name__],
-            },
-        )
-    out = {}
-    for data_description, dt in dts.items():
-        out[f"{DATA_DESCRIPTION_COL}_{data_description.name}"] = [dt]
-    out = pd.DataFrame(out)
-    out[SAMPLE_ID_COL] = sample_id
-    return out
-
-
-def explore_date_selector(
-    date_selector: DateSelector,
-    sample_ids: List[SampleID],
-    multiprocess: bool = False,
-) -> pd.DataFrame:
-    """
-    Get the dates for each DataDescription from a DateSelector for a list of sample ids
-    """
-    summarize = partial(_date_selector_summarize_sample_id, date_selector=date_selector)
-    return build_df(
-        summarize,
-        sample_ids,
-        multiprocess,
-    )
-
-
-# pipeline sample getter explore
+# sample getter explore
 def _pipeline_sample_getter_summarize_sample_id(
     sample_id: SampleID,
-    sample_getter: PipelineSampleGetter,
+    sample_getter: SampleGetter,
 ) -> pd.DataFrame:
     """
     Get the summary, dates, states or errors from each TensorMap for a sample id
     """
-    explore_batch = sample_getter.explore_batch(sample_id)
     out = {SAMPLE_ID_COL: sample_id}
-    if explore_batch.ok:
-        data = explore_batch.data
-        out[STATE_COL] = [data.state]
-        for name, tensor_result in {
-            **data.in_batch,
-            **explore_batch.data.out_batch,
+    try:
+        data = sample_getter(sample_id)
+        for name, tensor in {
+            **data[0],
+            **data[1],
         }.items():
-            if tensor_result.ok:
-                out[f"{name}_summary"] = [tensor_result.data.summary]
-                out[f"{name}_{DT_COL}"] = [tensor_result.data.dt]
-            else:
-                out[f"{name}_{ERROR_COL}"] = [tensor_result.error]
-    else:
-        out[ERROR_COL] = [explore_batch.error]
+            out[f"{name}_mean"] = [tensor.mean()]
+            out[f"{name}_std"] = [tensor.std()]
+            out[f"{name}_min"] = [tensor.min()]
+            out[f"{name}_max"] = [tensor.max()]
+            out[f"{name}_argmax"] = [tensor.argmax()]
+    except EXCEPTIONS as e:
+        out[ERROR_COL] = [_format_exception(e)]
     out = pd.DataFrame(out)
     return pd.DataFrame(out)
 
 
-def explore_pipeline_sample_getter(
-    pipeline_sample_getter: PipelineSampleGetter,
+def explore_sample_getter(
+    sample_getter: DataDescriptionSampleGetter,
     sample_ids: List[SampleID],
     multiprocess: bool = False,
 ) -> pd.DataFrame:
@@ -188,7 +154,7 @@ def explore_pipeline_sample_getter(
     """
     summarize = partial(
         _pipeline_sample_getter_summarize_sample_id,
-        sample_getter=pipeline_sample_getter,
+        sample_getter=sample_getter,
     )
     return build_df(
         summarize,
