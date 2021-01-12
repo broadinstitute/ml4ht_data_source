@@ -11,7 +11,7 @@ class DataDescription:
     For an example, see tests/data/test_data_description.py
     """
 
-    def get_loading_options(self, sample_id: SampleID) -> Optional[Dict[str, List[Any]]]:
+    def get_loading_options(self, sample_id: SampleID) -> Optional[List[LoadingOption]]:
         """
         Get all of the loading options for one sample id
         Loading options might be
@@ -26,11 +26,19 @@ class DataDescription:
         pass
 
     @abstractmethod
-    def get_raw_data(self, sample_id: SampleID, loading_option: LoadingOption) -> Tensor:
+    def get_raw_data(
+        self,
+        sample_id: SampleID,
+        loading_option: LoadingOption,
+    ) -> Tensor:
         """How to load a tensor given a sample id and a loading option"""
         pass
 
-    def get_summary_data(self, sample_id: SampleID, loading_option: LoadingOption) -> Dict[str, Any]:
+    def get_summary_data(
+        self,
+        sample_id: SampleID,
+        loading_option: LoadingOption,
+    ) -> Dict[str, Any]:
         """
         Get a summary of the tensor for a sample id and a date for exploration.
         It's recommended to override this for large tensors.

@@ -35,12 +35,12 @@ In order to use `DateSelector`, you must override its abstract method
 
 You can get one epoch of selected dates and find errors in your date selector using `explore.explore_date_selector`.
 
-## PipelineSampleGetter
+## DataDescriptionSampleGetter
 Once you have working `DataDescription`s and a `DateSelector`,
 you can combine them to make a full data pipeline which can be used for modeling,
-called a `PipelineSampleGetter`.
+called a `DataDescriptionSampleGetter`.
 
-`PipelineSampleGetter` is in [`sample_getter.py`](./sample_getter.py).
+`DataDescriptionSampleGetter` is in [`sample_getter.py`](./sample_getter.py).
 It allows you read raw data, select which dates to use,
 and apply filters and transformations to the selected data.
 
@@ -58,7 +58,7 @@ For example, `StateSetter` can be used to randomly select the same parts of an i
 for the input and outputs of a segmentation model.
 
 Once you combine input and output `TensorMaps` with a `DateSelector`
-and an optional `StateSetter`, you have a `PipelineSampleGetter`.
+and an optional `StateSetter`, you have a `DataDescriptionSampleGetter`.
 You can find where errors happen and get summary data using
 `explore_pipeline_sample_getter`.
 
@@ -97,8 +97,8 @@ def mnist_sample_getter(sample_id):
     return {'image': mnist_image}, {'digit': mnist_label}
 ```
 
-## Using `PipelineSampleGetter`
-If you want to train your model on the data you explore, [`PipelineSampleGetter`](#pipelinesamplegetter)
+## Using `DataDescriptionSampleGetter`
+If you want to train your model on the data you explore, [`DataDescriptionSampleGetter`](#pipelinesamplegetter)
 is a valid `SampleGetter`, so it can be directly used in the data loading utilities.
-Make sure you've explored your `PipelineSampleGetter` so that there are no sample ids
+Make sure you've explored your `DataDescriptionSampleGetter` so that there are no sample ids
 in your data that cause errors at runtime.

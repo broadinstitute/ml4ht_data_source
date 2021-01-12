@@ -1,7 +1,6 @@
 """Type descriptions for all data utilities"""
 
 
-from datetime import datetime
 from typing import Any, Callable, Dict, Optional, Tuple
 
 import numpy as np
@@ -17,10 +16,6 @@ SampleGetter = Callable[
 LoadingOption = Optional[
     Dict[str, Any]
 ]  # a shared state across data modalities during loading a single sample id
-OptionPicker = Callable[
-    [SampleID],
-    LoadingOption,
-]  # a function that produces a state for a single sample id
 
 EXCEPTIONS = (  # the exceptions caught during exploration
     IndexError,

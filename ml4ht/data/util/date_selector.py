@@ -1,32 +1,19 @@
 from abc import abstractmethod
-from datetime import timedelta
-from typing import Callable, Dict, List
+from datetime import timedelta, datetime
+from typing import Callable, Dict, List, Union
 
 from ml4ht.data.data_description import DataDescription
-from ml4ht.data.defines import DateTime, SampleID
+from ml4ht.data.defines import SampleID, LoadingOption
+
+
+DateTime = Union[timedelta, datetime]
+DATE_OPTION_KEY = "datetime"  # the key for dates in loading_options
 
 
 class NoDTError(ValueError):
     """Raise when at least one DataDescription has no datetimes for a sample id"""
 
     pass
-
-
-class DateSelector:
-    """
-    Selects the dates to use for input and output data for one sample id.
-
-    Example:
-    see RangeDateSelector
-    """
-
-    @abstractmethod
-    def select_dates(self, sample_id: SampleID) -> Dict[DataDescription, DateTime]:
-        pass
-
-    @property
-    def name(self) -> str:
-        return type(self.__name__)
 
 
 def first_dt(dts: List[DateTime]) -> DateTime:
@@ -38,7 +25,7 @@ def find_closest_dt(reference_dt: DateTime, dts: List[DateTime]) -> DateTime:
     return min(dts, key=lambda dt: abs(dt - reference_dt))
 
 
-class RangeDateSelector(DateSelector):
+class RangeDateSelector:
     """
     Finds a set of datetimes within a range of a reference DataDescription.
     The datetime of the reference DataDescription is chosen using `reference_date_chooser`.
@@ -59,22 +46,31 @@ class RangeDateSelector(DateSelector):
         self.time_before = time_before
         self.time_after = time_after
 
-    def select_dates(self, sample_id: SampleID) -> Dict[DataDescription, DateTime]:
-        ref_dts = self.reference_data_description.get_dates(sample_id)
+    def __call__(
+        self,
+        sample_id: SampleID,
+        loading_options: Dict[DataDescription, List[LoadingOption]],
+    ) -> Dict[DataDescription, Dict[str, DateTime]]:
+        ref_dts = [
+            option[DATE_OPTION_KEY]
+            for option in loading_options[self.reference_data_description]
+        ]
         ref_dt = self.reference_date_chooser(ref_dts)
         min_dt = ref_dt - self.time_before
         max_dt = ref_dt + self.time_after
 
-        all_dts = {self.reference_data_description: ref_dt}
+        all_dts = {self.reference_data_description: {DATE_OPTION_KEY: ref_dt}}
 
         for data_description in self.other_data_descriptions:
             other_dts = [
-                dt
-                for dt in data_description.get_dates(sample_id)
-                if min_dt <= dt <= max_dt
+                option[DATE_OPTION_KEY]
+                for option in loading_options[data_description]
+                if min_dt <= option[DATE_OPTION_KEY] <= max_dt
             ]
             if not other_dts:
                 raise NoDTError("No dates found.")
-            all_dts[data_description] = find_closest_dt(ref_dt, other_dts)
+            all_dts[data_description] = {
+                DATE_OPTION_KEY: find_closest_dt(ref_dt, other_dts),
+            }
 
         return all_dts
