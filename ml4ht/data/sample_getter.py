@@ -9,8 +9,8 @@ from ml4ht.data.defines import (
     DateTime,
     HalfBatch,
     SampleID,
-    State,
-    StateSetter,
+    LoadingOption,
+    OptionPicker,
     Tensor,
 )
 from ml4ht.data.result import Result
@@ -30,7 +30,7 @@ ExploreTensor = Result[TensorData, str]
 class BatchData:
     in_batch: Dict[str, ExploreTensor]
     out_batch: Dict[str, ExploreTensor]
-    state: State
+    state: LoadingOption
 
 
 ExploreBatch = Result[BatchData, str]
@@ -74,7 +74,7 @@ class TensorMap:
         self,
         sample_id: SampleID,
         dt: DateTime,
-        state: State,
+        state: LoadingOption,
     ) -> ExploreTensor:
         """
         For use during exploration.
@@ -93,7 +93,7 @@ class TensorMap:
                 )
         return ExploreTensor.Data(TensorData(self.summarizer(x), dt))
 
-    def get_tensor(self, sample_id: SampleID, dt: DateTime, state: State) -> Tensor:
+    def get_tensor(self, sample_id: SampleID, dt: DateTime, state: LoadingOption) -> Tensor:
         """
         For use during modeling. Does not catch errors.
         """
@@ -127,7 +127,7 @@ class PipelineSampleGetter:
         tensor_maps_in: List[TensorMap],
         tensor_maps_out: List[TensorMap],
         date_selector: DateSelector,
-        state_setter: StateSetter = None,
+        state_setter: OptionPicker = None,
     ):
         self.tensor_maps_in = tensor_maps_in
         self.tensor_maps_out = tensor_maps_out
@@ -138,7 +138,7 @@ class PipelineSampleGetter:
         self,
         sample_id: SampleID,
         dts: Dict[DataDescription, DateTime],
-        state: State,
+        state: LoadingOption,
         is_input: bool,
         explore: bool = False,
     ) -> Union[HalfBatch, Dict[str, ExploreTensor]]:

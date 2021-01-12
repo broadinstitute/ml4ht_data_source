@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Callable
 
-from ml4ht.data.defines import DateTime, State, Tensor
+from ml4ht.data.defines import DateTime, LoadingOption, Tensor
 
 
 class TransformationType(Enum):
@@ -30,7 +30,7 @@ class Transformation:
     """
 
     transformation_type: TransformationType
-    transformation: Callable[[Tensor, DateTime, State], Tensor]
+    transformation: Callable[[Tensor, DateTime, LoadingOption], Tensor]
 
     @property
     def is_augmentation(self) -> bool:
@@ -48,5 +48,5 @@ class Transformation:
     def name(self) -> str:
         return f"{self.transformation.__name__}_{self.transformation_type}"
 
-    def __call__(self, tensor: Tensor, dt: DateTime, state: State) -> Tensor:
+    def __call__(self, tensor: Tensor, dt: DateTime, state: LoadingOption) -> Tensor:
         return self.transformation(tensor, dt, state)
