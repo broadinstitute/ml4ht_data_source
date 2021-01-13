@@ -83,7 +83,6 @@ DD2 = DictionaryDataDescription(RAW_DATA_2, -1)
 RDS = RangeDateSelector(
     reference_data_description=DD1,
     reference_date_chooser=first_dt,
-    other_data_descriptions=[DD2],
     time_before=timedelta(days=0),
     time_after=timedelta(days=5),
 )

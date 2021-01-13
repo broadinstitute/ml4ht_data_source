@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List
 
 from ml4ht.data.data_description import DataDescription
 from ml4ht.data.defines import (
@@ -13,7 +12,7 @@ from ml4ht.data.defines import (
 OptionPicker = Callable[
     [
         SampleID,
-        Dict[DataDescription, List[LoadingOption]],
+        List[DataDescription],
     ],
     Dict[DataDescription, LoadingOption],
 ]  # a function that picks which loading options to use for DataDescriptions
@@ -54,11 +53,10 @@ class DataDescriptionSampleGetter:
         return half_batch
 
     def __call__(self, sample_id: SampleID) -> Batch:
-        loading_options = {
-            dd: dd.get_loading_options(sample_id)
-            for dd in self.input_data_descriptions + self.output_data_descriptions
-        }
-        loading_options = self.option_picker(sample_id, loading_options)
+        loading_options = self.option_picker(
+            sample_id,
+            self.input_data_descriptions + self.output_data_descriptions,
+        )
         tensors_in = self._half_batch(sample_id, loading_options, True)
         tensors_out = self._half_batch(sample_id, loading_options, False)
         return tensors_in, tensors_out

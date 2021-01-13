@@ -45,15 +45,10 @@ def test_select_range_forward():
     rds = RangeDateSelector(
         reference_data_description=DD1,
         reference_date_chooser=first_dt,
-        other_data_descriptions=[DD2],
         time_before=timedelta(days=0),
         time_after=timedelta(days=5),
     )
-    loading_options = {
-        DD1: DD1.get_loading_options(0),
-        DD2: DD2.get_loading_options(0),
-    }
-    dts = rds(0, loading_options)
+    dts = rds(0, [DD1, DD2])
     assert dts[DD1][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=1)
     assert dts[DD2][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=2)
 
@@ -62,15 +57,10 @@ def test_select_range_backward():
     rds = RangeDateSelector(
         reference_data_description=DD1,
         reference_date_chooser=first_dt,
-        other_data_descriptions=[DD2],
         time_before=timedelta(days=5),
         time_after=timedelta(days=0),
     )
-    loading_options = {
-        DD1: DD1.get_loading_options(0),
-        DD2: DD2.get_loading_options(0),
-    }
-    dts = rds(0, loading_options)
+    dts = rds(0, [DD1, DD2])
     assert dts[DD1][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=1)
     assert dts[DD2][DATE_OPTION_KEY] == datetime(year=2000, month=2, day=29)
 
@@ -79,13 +69,8 @@ def test_select_range_no_dates():
     rds = RangeDateSelector(
         reference_data_description=DD1,
         reference_date_chooser=first_dt,
-        other_data_descriptions=[DD2],
         time_before=timedelta(days=0),
         time_after=timedelta(days=0),
     )
-    loading_options = {
-        DD1: DD1.get_loading_options(0),
-        DD2: DD2.get_loading_options(0),
-    }
     with pytest.raises(NoDTError):
-        rds(0, loading_options)
+        rds(0, [DD1, DD2])
