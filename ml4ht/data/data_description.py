@@ -11,7 +11,7 @@ class DataDescription:
     For an example, see tests/data/test_data_description.py
     """
 
-    def get_loading_options(self, sample_id: SampleID) -> Optional[List[LoadingOption]]:
+    def get_loading_options(self, sample_id: SampleID) -> List[LoadingOption]:
         """
         Get all of the loading options for one sample id
         Loading options might be
@@ -23,7 +23,7 @@ class DataDescription:
         for example picking a random seed,
         you can just return a representative sample of them for use in exploration.
         """
-        pass
+        return [{}]
 
     @abstractmethod
     def get_raw_data(

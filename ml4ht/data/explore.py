@@ -62,9 +62,9 @@ def _data_description_summarize_sample_id(
     except EXCEPTIONS as e:
         return pd.DataFrame(
             {
-                SAMPLE_ID_COL: sample_id,
-                DATA_DESCRIPTION_COL: data_description.name,
-                ERROR_COL: _format_exception(e),
+                SAMPLE_ID_COL: [sample_id],
+                DATA_DESCRIPTION_COL: [data_description.name],
+                ERROR_COL: [_format_exception(e)],
             },
         )
     out = []
