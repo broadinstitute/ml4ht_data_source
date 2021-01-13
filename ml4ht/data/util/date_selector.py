@@ -36,24 +36,22 @@ class RangeDateSelector:
         self,
         reference_data_description: DataDescription,
         reference_date_chooser: Callable[[List[DateTime]], DateTime],
-        other_data_descriptions: List[DataDescription],
         time_before: timedelta = timedelta(days=0),
         time_after: timedelta = timedelta(days=0),
     ):
         self.reference_data_description = reference_data_description
         self.reference_date_chooser = reference_date_chooser
-        self.other_data_descriptions = other_data_descriptions
         self.time_before = time_before
         self.time_after = time_after
 
     def __call__(
         self,
         sample_id: SampleID,
-        loading_options: Dict[DataDescription, List[LoadingOption]],
+        data_descriptions: List[DataDescription],
     ) -> Dict[DataDescription, Dict[str, DateTime]]:
         ref_dts = [
             option[DATE_OPTION_KEY]
-            for option in loading_options[self.reference_data_description]
+            for option in self.reference_data_description.get_loading_options(sample_id)
         ]
         ref_dt = self.reference_date_chooser(ref_dts)
         min_dt = ref_dt - self.time_before
@@ -61,10 +59,10 @@ class RangeDateSelector:
 
         all_dts = {self.reference_data_description: {DATE_OPTION_KEY: ref_dt}}
 
-        for data_description in self.other_data_descriptions:
+        for data_description in data_descriptions:
             other_dts = [
                 option[DATE_OPTION_KEY]
-                for option in loading_options[data_description]
+                for option in data_description.get_loading_options(sample_id)
                 if min_dt <= option[DATE_OPTION_KEY] <= max_dt
             ]
             if not other_dts:
