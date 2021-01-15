@@ -6,14 +6,15 @@ import pytest
 
 from ml4ht.data.data_description import DataDescription
 from ml4ht.data.util.date_selector import (
-    NoDTError,
-    RangeDateSelector,
+    NoDatesAvailableError,
+    DateRangeOptionPicker,
     first_dt,
     DATE_OPTION_KEY,
 )
 from ml4ht.data.explore import (
     DATA_DESCRIPTION_COL,
     ERROR_COL,
+    NO_LOADING_OPTIONS_ERROR,
     _data_description_summarize_sample_id,
     _pipeline_sample_getter_summarize_sample_id,
     build_df,
@@ -34,6 +35,9 @@ RAW_DATA_1 = {
     3: {
         datetime(year=2000, month=3, day=1): np.array([10]),
     },
+    4: {
+        datetime(year=2000, month=3, day=1): np.array([10]),
+    },
 }
 RAW_DATA_2 = {
     0: {
@@ -51,6 +55,7 @@ RAW_DATA_2 = {
     3: {
         datetime(year=2000, month=3, day=10): np.array([10]),
     },
+    4: {},
 }
 
 
@@ -80,7 +85,7 @@ DD1 = DictionaryDataDescription(RAW_DATA_1, 2)
 DD2 = DictionaryDataDescription(RAW_DATA_2, -1)
 
 
-RDS = RangeDateSelector(
+RDS = DateRangeOptionPicker(
     reference_data_description=DD1,
     reference_date_chooser=first_dt,
     time_before=timedelta(days=0),
@@ -128,6 +133,12 @@ class TestDataDescriptionSummarizeSampleID:
             assert row[DATA_DESCRIPTION_COL] == data_description.name
             assert row[ERROR_COL] == _format_exception(TestException)
 
+    def test_no_loading_options(self):
+        data_description = DD2
+        row = _data_description_summarize_sample_id(4, data_description).iloc[0]
+        assert row[DATA_DESCRIPTION_COL] == data_description.name
+        assert row[ERROR_COL] == _format_exception(NO_LOADING_OPTIONS_ERROR)
+
 
 class TestSampleGetterSummarizeSampleID:
     def test_success(self):
@@ -139,8 +150,12 @@ class TestSampleGetterSummarizeSampleID:
 
     def test_fail_date_select(self):
         row = _pipeline_sample_getter_summarize_sample_id(3, PIPE).iloc[0]
-        assert NoDTError.__name__ in row[ERROR_COL]
+        assert row[ERROR_COL] == _format_exception(NoDatesAvailableError())
 
-    def test_fail_one_tmap(self):
+    def test_fail_one_data_description(self):
         row = _pipeline_sample_getter_summarize_sample_id(2, PIPE).iloc[0]
         assert row[ERROR_COL] == _format_exception(TestException)
+
+    def test_no_loading_options(self):
+        row = _pipeline_sample_getter_summarize_sample_id(4, PIPE).iloc[0]
+        assert row[ERROR_COL] == _format_exception(NoDatesAvailableError())

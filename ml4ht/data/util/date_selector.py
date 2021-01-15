@@ -10,7 +10,7 @@ DateTime = Union[timedelta, datetime]
 DATE_OPTION_KEY = "datetime"  # the key for dates in loading_options
 
 
-class NoDTError(ValueError):
+class NoDatesAvailableError(ValueError):
     """Raise when at least one DataDescription has no datetimes for a sample id"""
 
     pass
@@ -25,7 +25,7 @@ def find_closest_dt(reference_dt: DateTime, dts: List[DateTime]) -> DateTime:
     return min(dts, key=lambda dt: abs(dt - reference_dt))
 
 
-class RangeDateSelector:
+class DateRangeOptionPicker:
     """
     Finds a set of datetimes within a range of a reference DataDescription.
     The datetime of the reference DataDescription is chosen using `reference_date_chooser`.
@@ -66,7 +66,7 @@ class RangeDateSelector:
                 if min_dt <= option[DATE_OPTION_KEY] <= max_dt
             ]
             if not other_dts:
-                raise NoDTError("No dates found.")
+                raise NoDatesAvailableError()
             all_dts[data_description] = {
                 DATE_OPTION_KEY: find_closest_dt(ref_dt, other_dts),
             }

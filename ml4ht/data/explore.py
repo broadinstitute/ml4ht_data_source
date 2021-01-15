@@ -9,6 +9,7 @@ from ml4ht.data.defines import EXCEPTIONS, SampleID, SampleGetter
 from ml4ht.data.sample_getter import DataDescriptionSampleGetter
 
 ERROR_COL = "error"
+NO_LOADING_OPTIONS_ERROR = ValueError("No loading options")
 SAMPLE_ID_COL = "sample_id"
 DATA_DESCRIPTION_COL = "data_description"
 LOADING_OPTION_COL = "state"
@@ -59,6 +60,8 @@ def _data_description_summarize_sample_id(
     """
     try:
         loading_options = data_description.get_loading_options(sample_id)
+        if not loading_options:
+            raise NO_LOADING_OPTIONS_ERROR
     except EXCEPTIONS as e:
         return pd.DataFrame(
             {
