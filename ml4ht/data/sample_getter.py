@@ -32,7 +32,14 @@ class DataDescriptionSampleGetter:
     ):
         self.input_data_descriptions = input_data_descriptions
         self.output_data_descriptions = output_data_descriptions
-        self.option_picker = option_picker or (lambda sample_id: {})
+        self.option_picker = option_picker or self._default_option_picker
+
+    @staticmethod
+    def _default_option_picker(
+        sample_id: int,
+        data_descriptions: List[DataDescription],
+    ):
+        return {data_description: [{}] for data_description in data_descriptions}
 
     def _half_batch(
         self,

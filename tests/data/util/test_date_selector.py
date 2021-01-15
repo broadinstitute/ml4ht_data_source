@@ -4,8 +4,8 @@ import pytest
 
 from ml4ht.data.data_description import DataDescription
 from ml4ht.data.util.date_selector import (
-    NoDTError,
-    RangeDateSelector,
+    NoDatesAvailableError,
+    DateRangeOptionPicker,
     first_dt,
     DATE_OPTION_KEY,
 )
@@ -42,7 +42,7 @@ DD2 = DictionaryDataDescription(RAW_DATA_2)
 
 
 def test_select_range_forward():
-    rds = RangeDateSelector(
+    rds = DateRangeOptionPicker(
         reference_data_description=DD1,
         reference_date_chooser=first_dt,
         time_before=timedelta(days=0),
@@ -54,7 +54,7 @@ def test_select_range_forward():
 
 
 def test_select_range_backward():
-    rds = RangeDateSelector(
+    rds = DateRangeOptionPicker(
         reference_data_description=DD1,
         reference_date_chooser=first_dt,
         time_before=timedelta(days=5),
@@ -66,11 +66,11 @@ def test_select_range_backward():
 
 
 def test_select_range_no_dates():
-    rds = RangeDateSelector(
+    rds = DateRangeOptionPicker(
         reference_data_description=DD1,
         reference_date_chooser=first_dt,
         time_before=timedelta(days=0),
         time_after=timedelta(days=0),
     )
-    with pytest.raises(NoDTError):
+    with pytest.raises(NoDatesAvailableError):
         rds(0, [DD1, DD2])
