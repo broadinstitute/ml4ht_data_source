@@ -7,6 +7,7 @@ from ml4ht.data.data_loader import (
     numpy_collate_fn,
     CallbackDataset,
     ML4HCallbackDataset,
+    SampleGetterIterableDataset,
 )
 from ml4ht.data.defines import Batch
 
@@ -15,7 +16,22 @@ def sample_getter(sample_id: int) -> Batch:
     return {"in": np.full((3, 3), sample_id)}, {"out": np.full((1,), sample_id)}
 
 
+ERROR_ID = 3
+
+
+def error_sample_getter(sample_id: int) -> Batch:
+    if sample_id == ERROR_ID:
+        raise ValueError()
+    return {"in": np.full((3, 3), sample_id)}, {"out": np.full((1,), sample_id)}
+
+
 sample_getter_dataset = SampleGetterDataset(list(range(100)), sample_getter)
+
+
+def assert_batches_close(expected: Batch, actual: Batch):
+    for expected_half, actual_half in zip(expected, actual):
+        for k, v in expected_half.items():
+            np.testing.assert_allclose(actual_half[k], v)
 
 
 def test_numpy_data_loader():
@@ -91,3 +107,63 @@ def test_ml4h_callback_dataset_bad_merge():
     )
     with pytest.raises(ValueError):
         ML4HCallbackDataset([dataset1], [dataset2])
+
+
+class TestSampleGetterIterableDataset:
+    @pytest.mark.parametrize(
+        "multiprocess",
+        [False, True],
+    )
+    @pytest.mark.parametrize(
+        "next_epoch",
+        [
+            SampleGetterIterableDataset.no_shuffle_get_epoch,
+            SampleGetterIterableDataset.shuffle_get_epoch,
+        ],
+    )
+    def test_loads_correctly(self, multiprocess, next_epoch):
+        sample_ids = list(range(10))
+        dataset = SampleGetterIterableDataset(
+            sample_ids=sample_ids,
+            sample_getter=error_sample_getter,
+            get_epoch=next_epoch,
+        )
+        num_workers = 4 if multiprocess else 0
+        loader = DataLoader(
+            dataset,
+            num_workers=num_workers,
+            collate_fn=numpy_collate_fn,
+        )
+        found_ids = set()
+        for batch in loader:
+            sample_id = batch[0]["in"][0, 0, 0]
+            found_ids.add(sample_id)
+            assert_batches_close(numpy_collate_fn([sample_getter(sample_id)]), batch)
+        assert found_ids == set(sample_ids) - {ERROR_ID}
+
+    @pytest.mark.parametrize(
+        "multiprocess",
+        [False, True],
+    )
+    @pytest.mark.parametrize(
+        "next_epoch",
+        [
+            SampleGetterIterableDataset.no_shuffle_get_epoch,
+            SampleGetterIterableDataset.shuffle_get_epoch,
+        ],
+    )
+    def test_no_working_ids(self, multiprocess, next_epoch):
+        sample_ids = [3]
+        dataset = SampleGetterIterableDataset(
+            sample_ids=sample_ids,
+            sample_getter=error_sample_getter,
+            get_epoch=next_epoch,
+        )
+        num_workers = 4 if multiprocess else 0
+        loader = DataLoader(
+            dataset,
+            num_workers=num_workers,
+            collate_fn=numpy_collate_fn,
+        )
+        with pytest.raises(ValueError):
+            list(loader)

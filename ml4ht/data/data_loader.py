@@ -1,9 +1,9 @@
 from typing import List, Callable, TypeVar
 
 import numpy as np
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
-from ml4ht.data.defines import Batch, SampleGetter, SampleID, Tensor
+from ml4ht.data.defines import Batch, SampleGetter, SampleID, Tensor, EXCEPTIONS
 
 
 class SampleGetterDataset(Dataset):
@@ -23,6 +23,62 @@ class SampleGetterDataset(Dataset):
     def __getitem__(self, item: int) -> Batch:
         sample_id = self.sample_ids[item]
         return self.sample_getter(sample_id)
+
+
+class SampleGetterIterableDataset(IterableDataset):
+    """A pytorch Dataset compatible with ML4H models that gracefully skips errors"""
+
+    def __init__(
+        self,
+        sample_ids: List[SampleID],
+        sample_getter: SampleGetter,
+        get_epoch: Callable[[List[SampleID]], List[SampleID]] = None,
+    ):
+        super(SampleGetterIterableDataset).__init__()
+        self.sample_getter = sample_getter
+        self.sample_ids = sample_ids
+        self.get_epoch = get_epoch or self.no_shuffle_get_epoch
+
+    @staticmethod
+    def no_shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
+        """Non-shuffling epoch"""
+        return sample_ids
+
+    @staticmethod
+    def shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
+        """Shuffling epoch"""
+        return list(np.random.permutation(sample_ids))
+
+    def __iter__(self):
+        worker_info = get_worker_info()
+        if worker_info is not None:  # multi-process case
+            split_sample_ids = np.array_split(self.sample_ids, worker_info.num_workers)
+            self.sample_ids = split_sample_ids[worker_info.id]
+        return iter(self.one_epoch())
+
+    def __len__(self) -> int:
+        return len(self.sample_ids)
+
+    def one_epoch(self) -> Batch:
+        sample_ids = self.get_epoch(self.sample_ids)
+        successful_batches = 0
+        for sample_id in sample_ids:
+            try:
+                batch = self.sample_getter(sample_id)
+                successful_batches += 1
+                yield batch
+            except EXCEPTIONS as e:
+                continue
+        if successful_batches:
+            worker_info = get_worker_info()
+            worker_id = worker_info.id if worker_info else 0
+            print(
+                f"Worker {worker_id}: Epoch completed with {successful_batches} / {len(sample_ids)} successful batches",
+            )
+        else:
+            raise ValueError(
+                f"Visited all {len(sample_ids)} sample ids without finding any valid batches.",
+            )
 
 
 CallbackArg = TypeVar("CallbackArg")
