@@ -134,12 +134,13 @@ class TestSampleGetterIterableDataset:
             num_workers=num_workers,
             collate_fn=numpy_collate_fn,
         )
-        found_ids = set()
+        found_ids = []
         for batch in loader:
             sample_id = batch[0]["in"][0, 0, 0]
-            found_ids.add(sample_id)
+            found_ids.append(sample_id)
             assert_batches_close(numpy_collate_fn([sample_getter(sample_id)]), batch)
-        assert found_ids == set(sample_ids) - {ERROR_ID}
+        assert len(found_ids) == len(sample_ids) - 1  # right epoch length?
+        assert set(found_ids) == set(sample_ids) - {ERROR_ID}  # right epoch contents?
 
     @pytest.mark.parametrize(
         "multiprocess",
