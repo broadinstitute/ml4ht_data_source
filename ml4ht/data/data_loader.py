@@ -73,11 +73,11 @@ class SampleGetterIterableDataset(IterableDataset):
             worker_info = get_worker_info()
             worker_id = worker_info.id if worker_info else 0
             print(
-                f"Worker {worker_id}: Epoch completed with {successful_batches} / {len(sample_ids)} successful batches",
+                f"Worker {worker_id}: Epoch completed with {successful_batches} / {len(sample_ids)} successful samples",
             )
         else:
             raise ValueError(
-                f"Visited all {len(sample_ids)} sample ids without finding any valid batches.",
+                f"Visited all {len(sample_ids)} sample ids without finding any valid samples.",
             )
 
 
