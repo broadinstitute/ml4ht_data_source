@@ -92,6 +92,12 @@ class TestDataDescriptionSampleGetter:
             in_batch, _ = sample_getter(sample_id)
             assert list(data.values())[0] == in_batch[DD3.name]
 
+    def test_default_option_picker(self):
+        sample_getter = DataDescriptionSampleGetter([DD1], [DD2])
+        in_batch, out_batch = sample_getter(0)
+        assert in_batch[DD1.name] == 10
+        assert out_batch[DD2.name] == 2
+
     def test_call(self):
         in_batch, out_batch = SAMPLE_GETTER(0)
         assert in_batch[DD1.name] == 10

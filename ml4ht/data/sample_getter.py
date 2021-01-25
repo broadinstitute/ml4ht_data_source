@@ -38,8 +38,11 @@ class DataDescriptionSampleGetter:
     def _default_option_picker(
         sample_id: int,
         data_descriptions: List[DataDescription],
-    ):
-        return {data_description: [{}] for data_description in data_descriptions}
+    ) -> Dict[DataDescription, LoadingOption]:
+        return {
+            data_description: data_description.get_loading_options(sample_id)[0]
+            for data_description in data_descriptions
+        }
 
     def _half_batch(
         self,
