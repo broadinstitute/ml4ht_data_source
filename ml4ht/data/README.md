@@ -1,6 +1,6 @@
 # Data
 
-The [data module](.) provides to main functionalities
+The [data module](.) provides two main functionalities
 1. [Data exploration](./explore.py)
 2. [Data loading for neural network training](#loading-data-for-modeling)
 
