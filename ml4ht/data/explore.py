@@ -18,15 +18,16 @@ LOADING_OPTION_COL = "state"
 def build_df(
     summarizer: Callable[[SampleID], pd.DataFrame],
     sample_ids: List[SampleID],
-    multiprocess: bool,
+    multiprocess_workers: int = 0,
 ) -> pd.DataFrame:
     """
     Apply a function (summarizer) to a list of sample ids to build a DataFrame
+    If multiprocess_workers is 0, does not multiprocess
     """
     pool = None
     try:
-        if multiprocess:
-            pool = Pool(cpu_count())
+        if multiprocess_workers:
+            pool = Pool(multiprocess_workers)
             mapper = pool.imap_unordered(summarizer, sample_ids)
         else:
             mapper = map(summarizer, sample_ids)
@@ -34,7 +35,7 @@ def build_df(
         dfs = []
         for i, df in enumerate(mapper):
             dfs.append(df)
-            print(f"{(i + 1) // len(sample_ids):.1%} done.", end="\r")
+            print(f"{(i + 1) / len(sample_ids):.1%} done.", end="\r")
     finally:
         if pool is not None:
             pool.close()
@@ -105,7 +106,7 @@ def _data_descriptions_summarize_sample_id(
 def explore_data_descriptions(
     data_descriptions: List[DataDescription],
     sample_ids: List[SampleID],
-    multiprocess: bool = False,
+    multiprocess_workers: int = 0,
 ) -> pd.DataFrame:
     """
     Get summary data of DataDescriptions for a list of sample ids
@@ -117,7 +118,7 @@ def explore_data_descriptions(
     return build_df(
         summarize,
         sample_ids,
-        multiprocess,
+        multiprocess_workers,
     )
 
 
@@ -141,6 +142,7 @@ def _pipeline_sample_getter_summarize_sample_id(
             out[f"{name}_min"] = [tensor.min()]
             out[f"{name}_max"] = [tensor.max()]
             out[f"{name}_argmax"] = [tensor.argmax()]
+            out[f"{name}_shape"] = [tensor.shape]
     except EXCEPTIONS as e:
         out[ERROR_COL] = [_format_exception(e)]
     out = pd.DataFrame(out)
@@ -150,7 +152,7 @@ def _pipeline_sample_getter_summarize_sample_id(
 def explore_sample_getter(
     sample_getter: DataDescriptionSampleGetter,
     sample_ids: List[SampleID],
-    multiprocess: bool = False,
+    multiprocess_workers: int = 0,
 ) -> pd.DataFrame:
     """
     Get the datetime selected,
@@ -162,5 +164,5 @@ def explore_sample_getter(
     return build_df(
         summarize,
         sample_ids,
-        multiprocess,
+        multiprocess_workers,
     )

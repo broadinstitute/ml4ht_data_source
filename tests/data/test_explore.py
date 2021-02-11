@@ -103,12 +103,14 @@ def simple_summary(sample_id):
 
 
 @pytest.mark.parametrize(
-    "multiprocess",
-    [False, True],
+    "multiprocess_workers",
+    [0, 2],
 )
-def test_build_df(multiprocess):
+def test_build_df(multiprocess_workers):
     expected_df = pd.concat(list(map(simple_summary, [0, 1, 2])))
-    df = build_df(simple_summary, [0, 1, 2], multiprocess).sort_values(by="sample_id")
+    df = build_df(simple_summary, [0, 1, 2], multiprocess_workers).sort_values(
+        by="sample_id",
+    )
     del df[ERROR_COL]
     assert df.equals(expected_df)
 
