@@ -8,8 +8,10 @@ from ml4ht.data.data_loader import (
     CallbackDataset,
     ML4HCallbackDataset,
     SampleGetterIterableDataset,
+    AllLoadingOptionsDataset,
 )
 from ml4ht.data.defines import Batch
+from ml4ht.data.data_description import DataDescription
 
 
 def sample_getter(sample_id: int) -> Batch:
@@ -168,3 +170,53 @@ class TestSampleGetterIterableDataset:
         )
         with pytest.raises(ValueError):
             list(loader)
+
+
+class DictionaryDataDescription(DataDescription):
+    def __init__(self):
+        self.data = {
+            0: {
+                0: np.array([2]),
+                1: np.array([3]),
+                2: np.array([4]),
+                3: np.array([29]),
+            },
+            1: {
+                0: np.array([-1]),
+            },
+            2: {},
+            3: {0: np.array([-8])},
+        }
+
+    def get_loading_options(self, sample_id):
+        return [{"nice_key": x} for x in self.data[sample_id]]
+
+    def get_raw_data(self, sample_id, loading_option):
+        dt = loading_option["nice_key"]
+        if sample_id == 3:
+            raise ValueError("Bad sample id")
+        return self.data[sample_id][dt]
+
+
+class TestAllLoadingOptionsDataset:
+    def test_use_in_data_loader(self):
+        dd = DictionaryDataDescription()
+        dset = AllLoadingOptionsDataset([0, 1, 2, 3], dd)
+        loader = DataLoader(dset, batch_size=2, collate_fn=dset.collate_fn)
+        seen_ids = set()
+        for model_inputs, sample_ids, loading_options in loader:
+            for model_input, sample_id, loading_option in zip(
+                model_inputs,
+                sample_ids,
+                loading_options,
+            ):
+                if sample_id == 2:
+                    raise ValueError("Shouldn't see empty sample id")
+                if sample_id == 3:
+                    raise ValueError("Shouldn't see error-causing sample id")
+                assert np.allclose(
+                    model_input,
+                    dd.get_raw_data(sample_id, loading_option),
+                )
+                seen_ids.add(sample_id)
+        assert seen_ids == {0, 1}  # did we see all the ids we wanted to?
