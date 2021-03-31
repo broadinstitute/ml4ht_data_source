@@ -1,9 +1,10 @@
-from typing import List, Callable, TypeVar
+from typing import List, Callable, TypeVar, Dict, Any
 
 import numpy as np
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
 from ml4ht.data.defines import Batch, SampleGetter, SampleID, Tensor, EXCEPTIONS
+from ml4ht.data.data_description import DataDescription
 
 
 class SampleGetterDataset(Dataset):
@@ -26,7 +27,10 @@ class SampleGetterDataset(Dataset):
 
 
 class SampleGetterIterableDataset(IterableDataset):
-    """A pytorch Dataset compatible with ML4H models that gracefully skips errors"""
+    """
+    A pytorch Dataset compatible with ML4H models that gracefully skips errors.
+    Uses a SampleGetter, a list of sample ids, and a function to pick the order of the sample ids.
+    """
 
     def __init__(
         self,
@@ -79,6 +83,75 @@ class SampleGetterIterableDataset(IterableDataset):
             raise ValueError(
                 f"Visited all {len(sample_ids)} sample ids without finding any valid samples.",
             )
+
+
+class AllLoadingOptionsDataset(IterableDataset):
+    """
+    A pytorch Dataset used for fast inference on a single DataDescription.
+    It iterates through every loading option for the DataDescription.
+    It keeps track of loading options and sample ids for you.
+    It skips errors automatically.
+    It should be used in a torch data loader with its collate function.
+    """
+
+    def __init__(
+        self,
+        sample_ids: List[SampleID],
+        data_description: DataDescription,
+    ):
+        super(SampleGetterIterableDataset).__init__()
+        self.dd = data_description
+        self.sample_ids = sample_ids
+
+        # TODO: remove these edge cases
+        assert self.dd.name not in {"loading_option", "sample_id"}
+
+    def __iter__(self):
+        worker_info = get_worker_info()
+        if worker_info is not None:  # multi-process case
+            split_sample_ids = np.array_split(self.sample_ids, worker_info.num_workers)
+            self.sample_ids = split_sample_ids[worker_info.id]
+        return iter(self.one_epoch())
+
+    def __len__(self) -> int:
+        return len(self.sample_ids)
+
+    def _one_sample_id(self, sample_id: SampleID):
+        for loading_option in self.dd.get_loading_options(sample_id):
+            try:
+                yield {
+                    "model_input": self.dd.get_raw_data(sample_id, loading_option),
+                    "loading_option": loading_option,
+                    "sample_id": sample_id,
+                }
+            except EXCEPTIONS as e:
+                print(
+                    f"Got error {repr(e)} on sample id {sample_id} with loading option {loading_option}.",
+                )
+
+    def one_epoch(self) -> Batch:
+        for sample_id in self.sample_ids:
+            yield from self._one_sample_id(sample_id)
+
+    @staticmethod
+    def collate_fn(samples: List[Dict[str, Any]]):
+        """
+        The result of using this collate function with a torch data loader can be used as follows:
+
+            dset = AllLoadingOptionsDataset(...)
+            loader = data_loader(dset, collate_fn=AllLoadingOptionsDataset.collate_fn, batch_size=...)
+            for model_input, sample_ids, loading_options in loader:
+                pred = model.predict(model_input)
+                ...
+        """
+        sample_ids = []
+        loading_options = []
+        model_inputs = []
+        for sample in samples:
+            sample_ids.append(sample["sample_id"])
+            loading_options.append(sample["loading_option"])
+            model_inputs.append(sample["model_input"].astype(np.float32))
+        return np.stack(model_inputs), sample_ids, loading_options
 
 
 CallbackArg = TypeVar("CallbackArg")
