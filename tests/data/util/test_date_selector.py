@@ -25,12 +25,21 @@ RAW_DATA_2 = {
 }
 
 
+SAMPLE_ID_KEY = "sample_id"
+
+
 class DictionaryDataDescription(DataDescription):
     def __init__(self, data):
         self.data = data
 
     def get_loading_options(self, sample_id):
-        return [{DATE_OPTION_KEY: dt} for dt in self.data[sample_id]]
+        return [
+            {
+                DATE_OPTION_KEY: dt,
+                SAMPLE_ID_KEY: sample_id,
+            }
+            for dt in self.data[sample_id]
+        ]
 
     def get_raw_data(self, sample_id, loading_option):
         dt = loading_option[DATE_OPTION_KEY]
@@ -50,7 +59,9 @@ def test_select_range_forward():
     )
     dts = rds(0, [DD1, DD2])
     assert dts[DD1][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=1)
+    assert dts[DD1][SAMPLE_ID_KEY] == 0
     assert dts[DD2][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=2)
+    assert dts[DD2][SAMPLE_ID_KEY] == 0
 
 
 def test_select_range_backward():
@@ -62,7 +73,9 @@ def test_select_range_backward():
     )
     dts = rds(0, [DD1, DD2])
     assert dts[DD1][DATE_OPTION_KEY] == datetime(year=2000, month=3, day=1)
+    assert dts[DD1][SAMPLE_ID_KEY] == 0
     assert dts[DD2][DATE_OPTION_KEY] == datetime(year=2000, month=2, day=29)
+    assert dts[DD2][SAMPLE_ID_KEY] == 0
 
 
 def test_select_range_no_dates():
