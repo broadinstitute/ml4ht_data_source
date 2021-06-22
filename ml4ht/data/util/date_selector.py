@@ -1,6 +1,5 @@
-from abc import abstractmethod
 from datetime import timedelta, datetime
-from typing import Callable, Dict, List, Union
+from typing import Callable, Dict, List, Union, Iterable
 
 from ml4ht.data.data_description import DataDescription
 from ml4ht.data.defines import SampleID, LoadingOption
@@ -20,7 +19,7 @@ def first_dt(dts: List[DateTime]) -> DateTime:
     return sorted(dts)[0]
 
 
-def find_closest_dt(reference_dt: DateTime, dts: List[DateTime]) -> DateTime:
+def find_closest_dt(reference_dt: DateTime, dts: Iterable[DateTime]) -> DateTime:
     """Find the closest datetime in dts to the reference datetime"""
     return min(dts, key=lambda dt: abs(dt - reference_dt))
 
@@ -48,27 +47,26 @@ class DateRangeOptionPicker:
         self,
         sample_id: SampleID,
         data_descriptions: List[DataDescription],
-    ) -> Dict[DataDescription, Dict[str, DateTime]]:
-        ref_dts = [
-            option[DATE_OPTION_KEY]
+    ) -> Dict[DataDescription, LoadingOption]:
+        ref_dts = {
+            option[DATE_OPTION_KEY]: option
             for option in self.reference_data_description.get_loading_options(sample_id)
-        ]
-        ref_dt = self.reference_date_chooser(ref_dts)
+        }  # available dates from the reference DataDescription
+        # pick the reference date from the available dates
+        ref_dt = self.reference_date_chooser(list(ref_dts.keys()))
         min_dt = ref_dt - self.time_before
         max_dt = ref_dt + self.time_after
 
-        all_dts = {self.reference_data_description: {DATE_OPTION_KEY: ref_dt}}
+        all_dts = {self.reference_data_description: ref_dts[ref_dt]}
 
         for data_description in data_descriptions:
-            other_dts = [
-                option[DATE_OPTION_KEY]
+            other_dts = {
+                option[DATE_OPTION_KEY]: option
                 for option in data_description.get_loading_options(sample_id)
                 if min_dt <= option[DATE_OPTION_KEY] <= max_dt
-            ]
+            }
             if not other_dts:
                 raise NoDatesAvailableError()
-            all_dts[data_description] = {
-                DATE_OPTION_KEY: find_closest_dt(ref_dt, other_dts),
-            }
-
+            other_dt = find_closest_dt(ref_dt, other_dts.keys())
+            all_dts[data_description] = other_dts[other_dt]
         return all_dts
