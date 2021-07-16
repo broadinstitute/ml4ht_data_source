@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import pytest
 import numpy as np
 from torch.utils.data import DataLoader
@@ -202,8 +204,12 @@ class DictionaryDataDescription(DataDescription):
         return self.data[sample_id][dt]
 
 
+def _name_loading_option(sample_id, dds):
+    return [{dd: {"nice_key": dd._name} for dd in dds}]
+
+
 class TestAllLoadingOptionsDataset:
-    def test_use_in_data_loader(self):
+    def test_default_get_loading_options(self):
         dds = [
             DictionaryDataDescription(1),
             DictionaryDataDescription(2),
@@ -229,3 +235,39 @@ class TestAllLoadingOptionsDataset:
                     )
                 seen_ids.add(sample_id)
         assert seen_ids == {0, 1}  # did we see all the ids we wanted to?
+
+    def test_provide_get_loading_options(self):
+        dds = [
+            DictionaryDataDescription(1),
+            DictionaryDataDescription(2),
+        ]
+        dset = AllLoadingOptionsDataset(
+            [0, 1, 2, 3],
+            dds,
+            _name_loading_option,  # loading option is DD's _name
+        )
+        loader = DataLoader(dset, batch_size=2, collate_fn=dset.collate_fn)
+        seen_ids = set()
+        seen_options = defaultdict(set)
+        for model_inputs, sample_ids, loading_options in loader:
+            for i, (sample_id, loading_option) in enumerate(
+                zip(
+                    sample_ids,
+                    loading_options,
+                ),
+            ):
+                if sample_id == 2:
+                    raise ValueError("Shouldn't see empty sample id")
+                if sample_id == 3:
+                    raise ValueError("Shouldn't see error-causing sample id")
+                for dd in dds:
+                    option = loading_option[dd.name]
+                    assert np.allclose(
+                        model_inputs[dd.name][i],
+                        dd.get_raw_data(sample_id, option),
+                    )
+                    seen_options[dd].add(option["nice_key"])
+                seen_ids.add(sample_id)
+        assert seen_ids == {0}  # did we see all the ids we wanted to?
+        for dd in dds:
+            assert seen_options[dd] == {dd._name}

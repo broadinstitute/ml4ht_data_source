@@ -105,13 +105,19 @@ class AllLoadingOptionsDataset(IterableDataset):
         self,
         sample_ids: List[SampleID],
         data_descriptions: List[DataDescription],
-        get_loading_options: Callable[[SampleID], List[LoadingOption]] = None,
+        get_loading_options: Callable[
+            [SampleID, List[DataDescription]],
+            List[LoadingOption],
+        ] = None,
         raise_errors: bool = False,
     ):
         super(SampleGetterIterableDataset).__init__()
         self.dds = data_descriptions
         self.sample_ids = sample_ids
-        self.get_loading_options = (
+        self.get_loading_options: Callable[
+            [SampleID, List[DataDescription]],
+            List[LoadingOption],
+        ] = (
             get_loading_options or self._default_get_loading_options
         )
         self.raise_errors = raise_errors
@@ -119,6 +125,7 @@ class AllLoadingOptionsDataset(IterableDataset):
     def _default_get_loading_options(
         self,
         sample_id: SampleID,
+        _,
     ) -> List[Dict[DataDescription, LoadingOption]]:
         """
         Get the loading option for all data descriptions from the first DataDescription
@@ -140,7 +147,7 @@ class AllLoadingOptionsDataset(IterableDataset):
         return len(self.sample_ids)
 
     def _one_sample_id(self, sample_id: SampleID):
-        for loading_option in self.get_loading_options(sample_id):
+        for loading_option in self.get_loading_options(sample_id, self.dds):
             try:
                 model_input = {
                     dd.name: dd.get_raw_data(sample_id, loading_option[dd])
