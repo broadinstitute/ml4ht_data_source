@@ -3,7 +3,14 @@ from typing import List, Callable, TypeVar, Dict, Any
 import numpy as np
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
-from ml4ht.data.defines import Batch, SampleGetter, SampleID, Tensor, EXCEPTIONS
+from ml4ht.data.defines import (
+    Batch,
+    SampleGetter,
+    SampleID,
+    Tensor,
+    EXCEPTIONS,
+    LoadingOption,
+)
 from ml4ht.data.data_description import DataDescription
 
 
@@ -97,14 +104,30 @@ class AllLoadingOptionsDataset(IterableDataset):
     def __init__(
         self,
         sample_ids: List[SampleID],
-        data_description: DataDescription,
+        data_descriptions: List[DataDescription],
+        get_loading_options: Callable[[SampleID], List[LoadingOption]] = None,
+        raise_errors: bool = False,
     ):
         super(SampleGetterIterableDataset).__init__()
-        self.dd = data_description
+        self.dds = data_descriptions
         self.sample_ids = sample_ids
+        self.get_loading_options = (
+            get_loading_options or self._default_get_loading_options
+        )
+        self.raise_errors = raise_errors
 
-        # TODO: remove these edge cases
-        assert self.dd.name not in {"loading_option", "sample_id"}
+    def _default_get_loading_options(
+        self,
+        sample_id: SampleID,
+    ) -> List[Dict[DataDescription, LoadingOption]]:
+        """
+        Get the loading option for all data descriptions from the first DataDescription
+        """
+        loading_options = self.dds[0].get_loading_options(sample_id)
+        return [
+            {dd: loading_option for dd in self.dds}
+            for loading_option in loading_options
+        ]
 
     def __iter__(self):
         worker_info = get_worker_info()
@@ -117,14 +140,24 @@ class AllLoadingOptionsDataset(IterableDataset):
         return len(self.sample_ids)
 
     def _one_sample_id(self, sample_id: SampleID):
-        for loading_option in self.dd.get_loading_options(sample_id):
+        for loading_option in self.get_loading_options(sample_id):
             try:
-                yield {
-                    "model_input": self.dd.get_raw_data(sample_id, loading_option),
-                    "loading_option": loading_option,
-                    "sample_id": sample_id,
+                model_input = {
+                    dd.name: dd.get_raw_data(sample_id, loading_option[dd])
+                    for dd in self.dds
                 }
+                loading_option_str_key = {
+                    dd.name: option  # use names rather than objects for keys
+                    for dd, option in loading_option.items()
+                }
+                yield (
+                    sample_id,
+                    loading_option_str_key,
+                    model_input,
+                )
             except EXCEPTIONS as e:
+                if self.raise_errors:
+                    raise e
                 print(
                     f"Got error {repr(e)} on sample id {sample_id} with loading option {loading_option}.",
                 )
@@ -134,7 +167,7 @@ class AllLoadingOptionsDataset(IterableDataset):
             yield from self._one_sample_id(sample_id)
 
     @staticmethod
-    def collate_fn(samples: List[Dict[str, Any]]):
+    def collate_fn(samples):
         """
         The result of using this collate function with a torch data loader can be used as follows:
 
@@ -146,12 +179,20 @@ class AllLoadingOptionsDataset(IterableDataset):
         """
         sample_ids = []
         loading_options = []
-        model_inputs = []
-        for sample in samples:
-            sample_ids.append(sample["sample_id"])
-            loading_options.append(sample["loading_option"])
-            model_inputs.append(sample["model_input"].astype(np.float32))
-        return np.stack(model_inputs), sample_ids, loading_options
+
+        first_input = samples[0][2]
+        in_batch_keys = list(first_input)
+        in_batch = {
+            k: np.empty((len(samples),) + first_input[k].shape, dtype=np.float32)
+            for k in in_batch_keys
+        }
+
+        for i, (sample_id, loading_option, model_input) in enumerate(samples):
+            sample_ids.append(sample_id)
+            loading_options.append(loading_option)
+            for k in in_batch_keys:
+                in_batch[k][i] = model_input[k]
+        return in_batch, sample_ids, loading_options
 
 
 CallbackArg = TypeVar("CallbackArg")
@@ -231,18 +272,27 @@ class ML4HCallbackDataset(Dataset):
         )
 
 
-def numpy_collate_fn(batches: List[Batch]) -> Batch:
+def numpy_collate_fn(samples: List[Batch]) -> Batch:
     """
     Merges a list of ml4ht batch formatted data.
     Can be used as 'collate_fn` in torch.utils.data.DataLoader
     so that the torch data loader is compatible with tensorflow models
     """
+    # construct correctly-shaped empty arrays for input and output of model
+    in_batch_keys = list(samples[0][0])
     in_batch = {
-        k: np.stack([sample[0][k] for sample in batches]).astype(np.float32)
-        for k in batches[0][0]
+        k: np.empty((len(samples),) + samples[0][0][k].shape, dtype=np.float32)
+        for k in in_batch_keys
     }
+    out_batch_keys = list(samples[0][1])
     out_batch = {
-        k: np.stack([sample[1][k] for sample in batches]).astype(np.float32)
-        for k in batches[0][1]
+        k: np.empty((len(samples),) + samples[0][1][k].shape, dtype=np.float32)
+        for k in out_batch_keys
     }
+    # fill in the values of the input and output arrays
+    for i, sample in enumerate(samples):
+        for k in in_batch_keys:
+            in_batch[k][i] = sample[0][k]
+        for k in out_batch_keys:
+            out_batch[k][i] = sample[1][k]
     return in_batch, out_batch
