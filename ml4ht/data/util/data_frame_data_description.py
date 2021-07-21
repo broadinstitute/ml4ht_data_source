@@ -13,6 +13,7 @@ class DataFrameDataDescription(DataDescription):
         df: pd.DataFrame,
         col: str,
         process_col: Callable[[Any], Tensor] = None,
+        name: str = None,
     ):
         """
         Gets data from a column of the provided DataFrame.
@@ -24,6 +25,7 @@ class DataFrameDataDescription(DataDescription):
         self.process_col = process_col or self._default_process_call
         self.df = df.sort_index()[col]
         self.option_name = self.df.index.names[1]
+        self._name = name or col
 
     @staticmethod
     def _default_process_call(x: Any) -> Tensor:
@@ -32,6 +34,10 @@ class DataFrameDataDescription(DataDescription):
     def get_loading_options(self, sample_id: SampleID) -> List[LoadingOption]:
         options = self.df.loc[sample_id].index
         return [{self.option_name: option} for option in options]
+
+    @property
+    def name(self) -> str:
+        return self._name
 
     def get_raw_data(
         self,

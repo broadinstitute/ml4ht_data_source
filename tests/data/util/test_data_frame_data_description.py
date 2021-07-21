@@ -36,3 +36,21 @@ def test_get_raw_data():
         for option in options:
             val = dd.get_raw_data(sample_id, option)
             assert val == -TEST_DF.loc[sample_id, option["option"]][0]
+
+
+class TestName:
+    def test_no_name(self):
+        dd = DataFrameDataDescription(
+            TEST_DF,
+            "value",
+        )
+        assert dd.name == "value"
+
+    def test_name(self):
+        name = "AAAAAAA"
+        dd = DataFrameDataDescription(
+            TEST_DF,
+            "value",
+            name=name,
+        )
+        assert dd.name == name
