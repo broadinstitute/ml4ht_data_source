@@ -12,6 +12,7 @@ from ml4ht.data.defines import (
     LoadingOption,
 )
 from ml4ht.data.data_description import DataDescription
+from ml4ht.data.explore import explore_sample_getter
 
 
 class SampleGetterDataset(Dataset):
@@ -49,6 +50,7 @@ class SampleGetterIterableDataset(IterableDataset):
         self.sample_getter = sample_getter
         self.sample_ids = sample_ids
         self.get_epoch = get_epoch or self.no_shuffle_get_epoch
+        self.true_epochs = 0
 
     @staticmethod
     def no_shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
@@ -81,14 +83,16 @@ class SampleGetterIterableDataset(IterableDataset):
             except EXCEPTIONS as e:
                 continue
         if successful_batches:
+            self.true_epochs += 1
             worker_info = get_worker_info()
             worker_id = worker_info.id if worker_info else 0
             print(
-                f"Worker {worker_id}: Epoch completed with {successful_batches} / {len(sample_ids)} successful samples",
+                f"Worker {worker_id}: Epoch completed with {successful_batches} / {len(sample_ids)} successful samples, {self.true_epochs} epochs completed.",
             )
         else:
+            explore_df = explore_sample_getter(self.sample_getter, sample_ids)
             raise ValueError(
-                f"Visited all {len(sample_ids)} sample ids without finding any valid samples.",
+                f"Visited all {len(sample_ids)} sample ids without finding any valid samples.\n\nErrors:\n{explore_df['error'].value_counts()}",
             )
 
 
