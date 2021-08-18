@@ -17,7 +17,8 @@ from ml4ht.data.defines import EXCEPTIONS
 
 DataIndex = Mapping[str, Any]
 Data = Dict[str, np.ndarray]
-DataFetcher = Callable[[DataIndex], Data]
+# Given `DataIndex`, return (input data, output data)
+DataSource = Callable[[DataIndex], Tuple[Data, Data]]
 TrainingExample = Tuple[
     Dict[str, np.ndarray],
     Dict[str, np.ndarray],
@@ -28,7 +29,7 @@ def range_epoch_idx_generator(
     true_epoch_len: int,
     shuffle: bool,
     training_epochs_per_true_epoch: int = 1,
-) -> Sequence[int]:
+) -> Iterator[Sequence[int]]:
     """
     Yields optionally shuffled lists of indices from a range
     :param true_epoch_len: how many indices to yield from
@@ -51,7 +52,7 @@ def sample_id_epoch_generator(
     sample_id_name: str,
     shuffle: bool,
     training_epochs_per_true_epoch: int = 1,
-) -> List[DataIndex]:
+) -> Iterator[Sequence[DataIndex]]:
     """
     Yields optionally shuffled epochs of sample ids
     :param sample_ids: sample ids (e.g. MRNs) for each epoch
@@ -73,30 +74,29 @@ def sample_id_epoch_generator(
 class TrainingDataset(IterableDataset):
     # keys in error list
     error_key = "error"
-    fetcher_key = "data_fetcher"
+    source_key = "source"
     idx_key = "data_idx"
 
     def __init__(
         self,
-        input_data_fetchers: List[DataFetcher],
-        output_data_fetchers: List[DataFetcher],
+        data_sources: List[DataSource],
         epoch_indices_iterator: Iterator[Sequence[DataIndex]],
         raise_errors: bool = True,
+        verbose: bool = True,
     ):
         """
 
-        :param input_data_fetchers: Get data for inputs to model
-        :param output_data_fetchers: Get data for outputs of model
+        :param data_sources: Get data for inputs and outputs to model
         :param epoch_indices_iterator: Iterator over epochs of `DataIndex`s
             For example, see `sample_id_epoch_indices` above.
         :param raise_errors: Whether to raise or skip errors during calling of
             `DataFetcher`s
         """
         super(TrainingDataset).__init__()
-        self.input_data_fetchers = input_data_fetchers
-        self.output_data_fetchers = output_data_fetchers
+        self.data_sources = data_sources
         self.epoch_indices_iterator = epoch_indices_iterator
         self.raise_errors = raise_errors
+        self.verbose = verbose
         self.errors = []
 
     def __iter__(self):
@@ -113,42 +113,40 @@ class TrainingDataset(IterableDataset):
             map(self.training_example, epoch_indices),
         )
 
-    def _half_example(
+    def format_error(self, error: Dict[str, Any]) -> str:
+        return f"On index `{error[self.idx_key]}` got error `{error[self.error_key]}` from source `{error[self.source_key]}`"
+
+    def training_example(
         self,
         data_idx: DataIndex,
-        is_input: bool,
-    ) -> Tuple[Dict[str, np.ndarray], bool]:
-        data_fetchers = (
-            self.input_data_fetchers if is_input else self.output_data_fetchers
-        )
-        out = {}
-        for data_fetcher in data_fetchers:
+    ) -> Optional[Tuple[Data, Data]]:
+        combined_inputs, combined_outputs = {}, {}
+        for data_source in self.data_sources:
             try:
-                fetched_data = data_fetcher(data_idx)
+                data_in, data_out = data_source(data_idx)
             except EXCEPTIONS as e:
                 if self.raise_errors:
                     raise e
                 self.errors.append(
                     {
                         self.error_key: repr(e),
-                        self.fetcher_key: data_fetcher.__name__,
+                        self.source_key: data_source.__name__,
                         self.idx_key: data_idx,
                     },
                 )
-                return {}, True
-            for name, modality in fetched_data.items():
-                if name in out:
+                if self.verbose:
+                    print(self.format_error(self.errors[-1]))
+                return
+            for name, modality in data_in.items():
+                if name in combined_inputs:
                     raise ValueError(
-                        f"Multiple DataFetchers share the same modality called {name}",
+                        f"Multiple DataSources share the same input modality called {name}",
                     )
-                out[name] = modality
-        return out, False
-
-    def training_example(self, data_idx: DataIndex) -> Optional[TrainingExample]:
-        example_in, got_error = self._half_example(data_idx, True)
-        if got_error:
-            return
-        example_out, got_error = self._half_example(data_idx, False)
-        if got_error:
-            return
-        return example_in, example_out
+                combined_inputs[name] = modality
+            for name, modality in data_out.items():
+                if name in combined_outputs:
+                    raise ValueError(
+                        f"Multiple DataSources share the same output modality called {name}",
+                    )
+                combined_outputs[name] = modality
+        return combined_inputs, combined_outputs
