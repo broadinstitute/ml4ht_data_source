@@ -4,7 +4,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from ml4ht.data.data_source import (
     range_epoch_idx_generator,
-    sample_id_epoch_generator,
+    data_index_epoch_generator,
     TrainingDataset,
     TrainingIterableDataset,
     DataIndex,
@@ -135,16 +135,16 @@ class TestTrainingDataset:
 
 
 class TestTrainingIterableDataset:
+    epoch_generator = data_index_epoch_generator(
+        [{"sample_id": i} for i in range(6)],
+        True,
+        1,
+    )
+
     def test_skip_errors(self):
-        epoch_generator = sample_id_epoch_generator(
-            list(range(6)),
-            "sample_id",
-            True,
-            1,
-        )
         dset = TrainingIterableDataset(
             [_input_data_source, _output_data_source],
-            epoch_generator,
+            self.epoch_generator,
             raise_errors=False,
             verbose=True,
         )
@@ -163,30 +163,18 @@ class TestTrainingIterableDataset:
         }
 
     def test_raise_errors(self):
-        epoch_generator = sample_id_epoch_generator(
-            [5],
-            "sample_id",
-            True,
-            1,
-        )
         dset = TrainingIterableDataset(
             [_input_data_source, _output_data_source],
-            epoch_generator,
+            self.epoch_generator,
             raise_errors=True,
         )
         with pytest.raises(ValueError):
             list(iter(dset))
 
     def test_overlapping_inputs(self):
-        epoch_generator = sample_id_epoch_generator(
-            [0],
-            "sample_id",
-            True,
-            1,
-        )
         dset = TrainingIterableDataset(
             [_input_data_source, _input_data_source],
-            epoch_generator,
+            self.epoch_generator,
             raise_errors=True,
         )
         with pytest.raises(ValueError):
@@ -197,15 +185,9 @@ class TestTrainingIterableDataset:
         [False, True],
     )
     def test_works_in_loader(self, multiprocess):
-        epoch_generator = sample_id_epoch_generator(
-            list(range(6)),
-            "sample_id",
-            True,
-            1,
-        )
         dset = TrainingIterableDataset(
             [_input_data_source, _output_data_source],
-            epoch_generator,
+            self.epoch_generator,
             raise_errors=False,
         )
         loader = DataLoader(
