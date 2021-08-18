@@ -47,28 +47,26 @@ def range_epoch_idx_generator(
         yield from epochs
 
 
-def sample_id_epoch_generator(
-    sample_ids: List[int],
-    sample_id_name: str,
+def data_index_epoch_generator(
+    data_indices: List[DataIndex],
     shuffle: bool,
     training_epochs_per_true_epoch: int = 1,
 ) -> Iterator[Sequence[DataIndex]]:
     """
-    Yields optionally shuffled epochs of sample ids
-    :param sample_ids: sample ids (e.g. MRNs) for each epoch
-    :param sample_id_name: Name of sample_id in output `DataIndex`s
+    Yields optionally shuffled epochs of `DataIndex`s
+    :param data_indices: sample ids (e.g. MRNs) for each epoch
     :param shuffle: Whether to shuffle the sample ids each epoch
     :param training_epochs_per_true_epoch: How many training epochs to break a true epoch into.
         Defaults to 1 to yield true epochs.
-    :yield: Epoch worth of sample ids
+    :yield: Epoch worth of DataIndices
     """
     epoch_idx_generator = range_epoch_idx_generator(
-        true_epoch_len=len(sample_ids),
+        true_epoch_len=len(data_indices),
         shuffle=shuffle,
         training_epochs_per_true_epoch=training_epochs_per_true_epoch,
     )
     for indices in epoch_idx_generator:
-        yield [{sample_id_name: sample_ids[idx]} for idx in indices]
+        yield [data_indices[idx] for idx in indices]
 
 
 class TrainingDataset(Dataset):
@@ -136,7 +134,6 @@ class TrainingIterableDataset(IterableDataset):
         verbose: bool = True,
     ):
         """
-
         :param data_sources: Sources of data for inputs and outputs to model
         :param epoch_indices_iterator: Iterator over epochs of `DataIndex`s
             For example, see `sample_id_epoch_indices` above.
