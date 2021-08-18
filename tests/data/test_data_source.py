@@ -1,3 +1,4 @@
+from typing import Iterable
 import pytest
 import numpy as np
 from torch.utils.data import DataLoader
@@ -5,6 +6,7 @@ from ml4ht.data.data_source import (
     range_epoch_idx_generator,
     sample_id_epoch_generator,
     TrainingDataset,
+    TrainingIterableDataset,
     DataIndex,
 )
 from ml4ht.data.data_loader import numpy_collate_fn
@@ -91,6 +93,48 @@ def assert_batches_close(expected, actual):
 
 
 class TestTrainingDataset:
+    @staticmethod
+    def _get_dset(ids: Iterable[int]):
+        return TrainingDataset(
+            [_input_data_source, _output_data_source],
+            [{"sample_id": i} for i in ids],
+        )
+
+    def test_overlapping_inputs(self):
+        dset = self._get_dset([5])
+        with pytest.raises(ValueError):
+            dset[0]
+
+    @pytest.mark.parametrize(
+        "multiprocess",
+        [False, True],
+    )
+    def test_works_in_loader(self, multiprocess):
+        dset = self._get_dset(range(5))
+        loader = DataLoader(
+            dset,
+            batch_size=2,
+            collate_fn=numpy_collate_fn,
+            num_workers=2 if multiprocess else 0,
+            drop_last=False,
+        )
+        found_ids = []
+        for batch in loader:
+            sample_ids = batch[0]["a"]
+            found_ids += list(sample_ids)
+            assert_batches_close(
+                numpy_collate_fn(
+                    [
+                        dset.training_example({"sample_id": sample_id})
+                        for sample_id in sample_ids
+                    ],
+                ),
+                batch,
+            )
+        assert sorted(found_ids) == sorted(range(5))
+
+
+class TestTrainingIterableDataset:
     def test_skip_errors(self):
         epoch_generator = sample_id_epoch_generator(
             list(range(6)),
@@ -98,7 +142,7 @@ class TestTrainingDataset:
             True,
             1,
         )
-        dset = TrainingDataset(
+        dset = TrainingIterableDataset(
             [_input_data_source, _output_data_source],
             epoch_generator,
             raise_errors=False,
@@ -125,7 +169,7 @@ class TestTrainingDataset:
             True,
             1,
         )
-        dset = TrainingDataset(
+        dset = TrainingIterableDataset(
             [_input_data_source, _output_data_source],
             epoch_generator,
             raise_errors=True,
@@ -140,7 +184,7 @@ class TestTrainingDataset:
             True,
             1,
         )
-        dset = TrainingDataset(
+        dset = TrainingIterableDataset(
             [_input_data_source, _input_data_source],
             epoch_generator,
             raise_errors=True,
@@ -159,7 +203,7 @@ class TestTrainingDataset:
             True,
             1,
         )
-        dset = TrainingDataset(
+        dset = TrainingIterableDataset(
             [_input_data_source, _output_data_source],
             epoch_generator,
             raise_errors=False,
