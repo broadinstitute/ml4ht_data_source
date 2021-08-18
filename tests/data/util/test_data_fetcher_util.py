@@ -1,6 +1,6 @@
 import pandas as pd
 
-from ml4ht.data.util.data_fetcher_util import df_epoch_index_generator
+from ml4ht.data.util.data_source_util import df_epoch_index_generator
 
 
 class TestDfEpochIndexGenerator:

@@ -2,7 +2,7 @@ from typing import Sequence
 
 import pandas as pd
 
-from ml4ht.data.data_fetcher import DataIndex, range_epoch_idx_generator
+from ml4ht.data.data_source import DataIndex, range_epoch_idx_generator
 
 
 def df_epoch_index_generator(

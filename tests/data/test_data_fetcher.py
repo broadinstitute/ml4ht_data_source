@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from torch.utils.data import DataLoader
-from ml4ht.data.data_fetcher import (
+from ml4ht.data.data_source import (
     range_epoch_idx_generator,
     sample_id_epoch_generator,
     TrainingDataset,
@@ -72,16 +72,16 @@ class TestRangeEpochIdxGenerator:
             assert seen_ids != list(range(true_epoch_len))
 
 
-def _input_data_fetcher(idx: DataIndex):
+def _input_data_source(idx: DataIndex):
     i = np.array(idx["sample_id"])
     if i == 5:
         raise ValueError
-    return {"a": i, "b": -i}
+    return {"a": i, "b": -i}, {}
 
 
-def _output_data_fetcher(idx: DataIndex):
+def _output_data_source(idx: DataIndex):
     i = np.array(idx["sample_id"])
-    return {"c": i, "d": -i}
+    return {}, {"c": i, "d": -i}
 
 
 def assert_batches_close(expected, actual):
@@ -99,10 +99,10 @@ class TestTrainingDataset:
             1,
         )
         dset = TrainingDataset(
-            [_input_data_fetcher],
-            [_output_data_fetcher],
+            [_input_data_source, _output_data_source],
             epoch_generator,
             raise_errors=False,
+            verbose=True,
         )
         inputs = []
         outputs = []
@@ -110,12 +110,12 @@ class TestTrainingDataset:
             inputs.append(x)
             outputs.append(y)
         for i in range(5):
-            assert _input_data_fetcher({"sample_id": i}) in inputs
-            assert _output_data_fetcher({"sample_id": i}) in outputs
+            assert _input_data_source({"sample_id": i})[0] in inputs
+            assert _output_data_source({"sample_id": i})[1] in outputs
         assert dset.errors[0] == {
             dset.error_key: repr(ValueError()),
             dset.idx_key: {"sample_id": 5},
-            dset.fetcher_key: _input_data_fetcher.__name__,
+            dset.source_key: _input_data_source.__name__,
         }
 
     def test_raise_errors(self):
@@ -126,8 +126,7 @@ class TestTrainingDataset:
             1,
         )
         dset = TrainingDataset(
-            [_input_data_fetcher],
-            [_output_data_fetcher],
+            [_input_data_source, _output_data_source],
             epoch_generator,
             raise_errors=True,
         )
@@ -142,8 +141,7 @@ class TestTrainingDataset:
             1,
         )
         dset = TrainingDataset(
-            [_input_data_fetcher, _input_data_fetcher],
-            [],
+            [_input_data_source, _input_data_source],
             epoch_generator,
             raise_errors=True,
         )
@@ -162,8 +160,7 @@ class TestTrainingDataset:
             1,
         )
         dset = TrainingDataset(
-            [_input_data_fetcher],
-            [_output_data_fetcher],
+            [_input_data_source, _output_data_source],
             epoch_generator,
             raise_errors=False,
         )
@@ -181,10 +178,7 @@ class TestTrainingDataset:
             assert_batches_close(
                 numpy_collate_fn(
                     [
-                        (
-                            _input_data_fetcher({"sample_id": sample_id}),
-                            _output_data_fetcher({"sample_id": sample_id}),
-                        )
+                        dset.training_example({"sample_id": sample_id})
                         for sample_id in sample_ids
                     ],
                 ),
