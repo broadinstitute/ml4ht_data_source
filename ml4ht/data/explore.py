@@ -1,12 +1,14 @@
 from functools import partial
 from multiprocessing import Pool, cpu_count
-from typing import Callable, List
+from typing import Callable, List, TypeVar, Dict
 
 import pandas as pd
+import numpy as np
 
 from ml4ht.data.data_description import DataDescription
 from ml4ht.data.defines import EXCEPTIONS, SampleID, SampleGetter
 from ml4ht.data.sample_getter import DataDescriptionSampleGetter
+from ml4ht.data.data_source import DataSource, DataIndex
 
 ERROR_COL = "error"
 NO_LOADING_OPTIONS_ERROR = ValueError("No loading options")
@@ -15,9 +17,12 @@ DATA_DESCRIPTION_COL = "data_description"
 LOADING_OPTION_COL = "state"
 
 
+T = TypeVar("T")
+
+
 def build_df(
-    summarizer: Callable[[SampleID], pd.DataFrame],
-    sample_ids: List[SampleID],
+    summarizer: Callable[[T], pd.DataFrame],
+    sample_ids: List[T],
     multiprocess_workers: int = 0,
 ) -> pd.DataFrame:
     """
@@ -122,13 +127,25 @@ def explore_data_descriptions(
     )
 
 
+def _summarize_tensor(tensor: np.ndarray) -> Dict[str, float]:
+    out = {}
+    out["mean"] = tensor.mean()
+    out["median"] = np.median(tensor)
+    out["std"] = tensor.std()
+    out["min"] = tensor.min()
+    out["max"] = tensor.max()
+    out["argmax"] = tensor.argmax()
+    out["shape"] = tensor.shape
+    return out
+
+
 # sample getter explore
 def _pipeline_sample_getter_summarize_sample_id(
     sample_id: SampleID,
     sample_getter: SampleGetter,
 ) -> pd.DataFrame:
     """
-    Get the summary, dates, states or errors from each TensorMap for a sample id
+    Get the summary, dates, states or errors from each input and output for a sample id
     """
     out = {SAMPLE_ID_COL: sample_id}
     try:
@@ -137,12 +154,9 @@ def _pipeline_sample_getter_summarize_sample_id(
             **data[0],
             **data[1],
         }.items():
-            out[f"{name}_mean"] = [tensor.mean()]
-            out[f"{name}_std"] = [tensor.std()]
-            out[f"{name}_min"] = [tensor.min()]
-            out[f"{name}_max"] = [tensor.max()]
-            out[f"{name}_argmax"] = [tensor.argmax()]
-            out[f"{name}_shape"] = [tensor.shape]
+            tensor_summary = _summarize_tensor(tensor)
+            for field, val in tensor_summary.items():
+                out[f"{name}_{field}"] = [val]
     except EXCEPTIONS as e:
         out[ERROR_COL] = [_format_exception(e)]
     out = pd.DataFrame(out)
@@ -155,7 +169,7 @@ def explore_sample_getter(
     multiprocess_workers: int = 0,
 ) -> pd.DataFrame:
     """
-    Get the datetime selected,
+    Summarize the values and errors of a sample getter
     """
     summarize = partial(
         _pipeline_sample_getter_summarize_sample_id,
@@ -164,5 +178,71 @@ def explore_sample_getter(
     return build_df(
         summarize,
         sample_ids,
+        multiprocess_workers,
+    )
+
+
+def _data_source_auto_summarize_sample_id(
+    data_idx: DataIndex,
+    data_source: DataSource,
+) -> pd.DataFrame:
+    out = {f"idx: {k}": [v] for k, v in data_idx.items()}
+    try:
+        data_in, data_out = data_source(data_idx)
+        for name, tensor in data_in.items():
+            out.update(
+                {
+                    f"input: {name}_{field}": [val]
+                    for field, val in _summarize_tensor(tensor).items()
+                },
+            )
+        for name, tensor in data_out.items():
+            out.update(
+                {
+                    f"output: {name}_{field}": [val]
+                    for field, val in _summarize_tensor(tensor).items()
+                },
+            )
+    except EXCEPTIONS as e:
+        out[ERROR_COL] = [_format_exception(e)]
+    return pd.DataFrame(out)
+
+
+def _data_source_summarize_sample_id(
+    data_idx: DataIndex,
+    data_source: DataSource,
+) -> pd.DataFrame:
+    out = {f"idx: {k}": [v] for k, v in data_idx.items()}
+    try:
+        data_in, data_out = data_source(data_idx)
+        for name, tensor in data_in.items():
+            out[f"input: {name}"] = [tensor]
+        for name, tensor in data_out.items():
+            out[f"output: {name}"] = [tensor]
+    except EXCEPTIONS as e:
+        out[ERROR_COL] = [_format_exception(e)]
+    return pd.DataFrame(out)
+
+
+def explore_data_source(
+    data_source: DataSource,
+    data_indices: List[DataIndex],
+    auto_summarize=True,
+    multiprocess_workers: int = 0,
+) -> pd.DataFrame:
+    """
+    Get DataSource values over all the data indices.
+    `auto_summarize` converts those values into summary statistics
+    in the output `DataFrame`.
+    """
+    summarize = partial(
+        _data_source_auto_summarize_sample_id
+        if auto_summarize
+        else _data_source_summarize_sample_id(),
+        data_source=data_source,
+    )
+    return build_df(
+        summarize,
+        data_indices,
         multiprocess_workers,
     )
