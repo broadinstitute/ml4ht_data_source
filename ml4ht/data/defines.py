@@ -22,5 +22,6 @@ EXCEPTIONS = (  # the exceptions caught during exploration
     KeyError,
     ValueError,
     OSError,
+    AttributeError,
     RuntimeError,
 )
