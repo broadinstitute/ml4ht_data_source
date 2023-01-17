@@ -87,12 +87,13 @@ class SampleGetterIterableDataset(IterableDataset):
             worker_info = get_worker_info()
             worker_id = worker_info.id if worker_info else 0
             print(
-                f"Worker {worker_id}: Epoch completed with {successful_batches} / {len(sample_ids)} successful samples, {self.true_epochs} epochs completed.",
+                f"\n Epoch done {successful_batches} / {len(sample_ids)} successful ({100.0*successful_batches/len(sample_ids):0.1f}%)",
+                f"True epochs: {self.true_epochs}, by worker {worker_id}.",
             )
         else:
             explore_df = explore_sample_getter(self.sample_getter, sample_ids)
             raise ValueError(
-                f"Visited all {len(sample_ids)} sample ids without finding any valid samples.\n\nErrors:\n{explore_df['error'].value_counts()}",
+                f"\nVisited all {len(sample_ids)} sample ids without finding any valid samples.\n\nErrors:\n{explore_df['error'].value_counts()}",
             )
 
 
