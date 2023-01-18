@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import List, Callable, TypeVar, Dict, Any
 
 import numpy as np
@@ -13,6 +14,7 @@ from ml4ht.data.defines import (
 )
 from ml4ht.data.data_description import DataDescription
 from ml4ht.data.explore import explore_sample_getter
+
 
 
 class SampleGetterDataset(Dataset):
@@ -50,14 +52,11 @@ class SampleGetterIterableDataset(IterableDataset):
         self.sample_getter = sample_getter
         self.sample_ids = sample_ids
         self.get_epoch = get_epoch or self.no_shuffle_get_epoch
-        self.true_epochs = 0
 
-    @staticmethod
     def no_shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
         """Non-shuffling epoch"""
         return sample_ids
 
-    @staticmethod
     def shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
         """Shuffling epoch"""
         return list(np.random.permutation(sample_ids))
@@ -83,17 +82,17 @@ class SampleGetterIterableDataset(IterableDataset):
             except EXCEPTIONS as e:
                 continue
         if successful_batches:
-            self.true_epochs += 1
             worker_info = get_worker_info()
             worker_id = worker_info.id if worker_info else 0
             print(
-                f"\n Epoch done {successful_batches} / {len(sample_ids)} successful ({100.0*successful_batches/len(sample_ids):0.1f}%)",
-                f"True epochs: {self.true_epochs}, by worker {worker_id}.",
+                f"Worker {worker_id} completed an epoch {successful_batches} / {len(sample_ids)} successful."
+                f"Batch success rate: {100.0*successful_batches/len(sample_ids):0.1f}%",
             )
         else:
             explore_df = explore_sample_getter(self.sample_getter, sample_ids)
             raise ValueError(
-                f"\nVisited all {len(sample_ids)} sample ids without finding any valid samples.\n\nErrors:\n{explore_df['error'].value_counts()}",
+                f"\nVisited all {len(sample_ids)} sample ids without finding any valid samples.\n"
+                f"\nErrors:\n{explore_df['error'].value_counts()}",
             )
 
 
