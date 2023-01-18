@@ -19,8 +19,12 @@ from ml4ht.data.explore import (
     _pipeline_sample_getter_summarize_sample_id,
     build_df,
     _format_exception,
+    _summarize_tensor,
+    _data_source_summarize_sample_id,
+    _data_source_auto_summarize_sample_id,
 )
 from ml4ht.data.sample_getter import DataDescriptionSampleGetter
+from ml4ht.data.data_source import DataIndex
 
 RAW_DATA_1 = {
     0: {
@@ -161,3 +165,46 @@ class TestSampleGetterSummarizeSampleID:
     def test_no_loading_options(self):
         row = _pipeline_sample_getter_summarize_sample_id(4, PIPE).iloc[0]
         assert row[ERROR_COL] == _format_exception(NoDatesAvailableError())
+
+
+def _data_source(idx: DataIndex):
+    i = np.array(idx["sample_id"])
+    if i == 5:
+        raise ValueError
+    return {"a": i, "b": -i}, {"c": np.array(i ** 2)}
+
+
+class TestExploreDataSource:
+    def test_data_source_summarize_sample_id(self):
+        idx = {"sample_id": 1}
+        out = _data_source_summarize_sample_id(idx, _data_source)
+        assert out["idx: sample_id"].iloc[0] == 1
+        expected_in, expected_out = _data_source(idx)
+        for k, v in expected_in.items():
+            assert out[f"input: {k}"].iloc[0] == v
+        for k, v in expected_out.items():
+            assert out[f"output: {k}"].iloc[0] == v
+
+    def test_data_source_summarize_sample_id_error(self):
+        idx = {"sample_id": 5}
+        out = _data_source_summarize_sample_id(idx, _data_source)
+        assert out["idx: sample_id"].iloc[0] == 5
+        assert out[ERROR_COL].iloc[0] == _format_exception(ValueError())
+
+    def test_data_source_auto_summarize_sample_id(self):
+        idx = {"sample_id": 1}
+        out = _data_source_auto_summarize_sample_id(idx, _data_source)
+        assert out["idx: sample_id"].iloc[0] == 1
+        expected_in, expected_out = _data_source(idx)
+        for k, v in expected_in.items():
+            for field, val in _summarize_tensor(v).items():
+                assert out[f"input: {k}_{field}"].iloc[0] == val
+        for k, v in expected_out.items():
+            for field, val in _summarize_tensor(v).items():
+                assert out[f"output: {k}_{field}"].iloc[0] == val
+
+    def test_data_source_auto_summarize_sample_id_error(self):
+        idx = {"sample_id": 5}
+        out = _data_source_summarize_sample_id(idx, _data_source)
+        assert out["idx: sample_id"].iloc[0] == 5
+        assert out[ERROR_COL].iloc[0] == _format_exception(ValueError())
