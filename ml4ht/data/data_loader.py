@@ -16,7 +16,6 @@ from ml4ht.data.data_description import DataDescription
 from ml4ht.data.explore import explore_sample_getter
 
 
-
 class SampleGetterDataset(Dataset):
     """A pytorch Dataset compatible with ML4H models"""
 
