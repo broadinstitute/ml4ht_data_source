@@ -18,7 +18,7 @@ The data can be used in both tensorflow and pytorch.
 | Allow a random state to be shared across modalities        | Selecting a random chunk of an MRI to segment
 
 ## Setup
-`torch_ml4h` uses python 3.6 or higher.
+`ml4ht_data_source` uses python 3.6 or higher.
 Setup can be done using `venv`.
 ```bash
 python3.8 -m venv env
