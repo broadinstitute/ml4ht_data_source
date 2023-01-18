@@ -85,7 +85,7 @@ class SampleGetterIterableDataset(IterableDataset):
             worker_id = worker_info.id if worker_info else 0
             print(
                 f"Worker {worker_id} completed an epoch {successful_batches} / {len(sample_ids)} successful."
-                f"Batch success rate: {100.0*successful_batches/len(sample_ids):0.1f}%",
+                f" Batch success rate: {100.0*successful_batches/len(sample_ids):0.1f}%",
             )
         else:
             explore_df = explore_sample_getter(self.sample_getter, sample_ids)
