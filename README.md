@@ -1,5 +1,5 @@
-# torch_ml4h
-`torch_ml4h` is a library that allows you to streamline the process
+# ml4ht_data_source
+`ml4ht_data_source` is a library that allows you to streamline the process
 of modeling multi-modal health data.
 
 It makes it easy to load and model on data from different storage formats
@@ -29,7 +29,7 @@ pip install .
 ```
 
 ## Tests
-`torch_ml4h` is thoroughly tested using `pytest`.
+`ml4ht_data_source` is thoroughly tested using `pytest`.
 ```bash
 source env/bin/activate
 pip install .
