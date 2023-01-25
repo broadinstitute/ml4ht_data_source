@@ -119,7 +119,6 @@ class TestSampleGetterIterableDataset:
         [False, True],
     )
     @pytest.mark.parametrize(
-        "next_epoch",
         [
             SampleGetterIterableDataset.no_shuffle_get_epoch,
             SampleGetterIterableDataset.shuffle_get_epoch,
@@ -151,7 +150,6 @@ class TestSampleGetterIterableDataset:
         [False, True],
     )
     @pytest.mark.parametrize(
-        "next_epoch",
         [
             SampleGetterIterableDataset.no_shuffle_get_epoch,
             SampleGetterIterableDataset.shuffle_get_epoch,

@@ -52,11 +52,13 @@ class SampleGetterIterableDataset(IterableDataset):
         self.sample_ids = sample_ids
         self.get_epoch = get_epoch or self.no_shuffle_get_epoch
 
-    def no_shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
+    @staticmethod
+    def no_shuffle_get_epoch(self, sample_ids: List[SampleID]) -> List[SampleID]:
         """Non-shuffling epoch"""
         return sample_ids
 
-    def shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
+    @staticmethod
+    def shuffle_get_epoch(self, sample_ids: List[SampleID]) -> List[SampleID]:
         """Shuffling epoch"""
         return list(np.random.permutation(sample_ids))
 
