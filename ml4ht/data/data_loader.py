@@ -35,6 +35,16 @@ class SampleGetterDataset(Dataset):
         return self.sample_getter(sample_id)
 
 
+def no_shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
+    """Non-shuffling epoch"""
+    return sample_ids
+
+
+def shuffle_get_epoch(sample_ids: List[SampleID]) -> List[SampleID]:
+    """Shuffling epoch"""
+    return list(np.random.permutation(sample_ids))
+
+
 class SampleGetterIterableDataset(IterableDataset):
     """
     A pytorch Dataset compatible with ML4H models that gracefully skips errors.
@@ -50,15 +60,7 @@ class SampleGetterIterableDataset(IterableDataset):
         super(SampleGetterIterableDataset).__init__()
         self.sample_getter = sample_getter
         self.sample_ids = sample_ids
-        self.get_epoch = get_epoch or self.no_shuffle_get_epoch
-
-    def no_shuffle_get_epoch(self) -> List[SampleID]:
-        """Non-shuffling epoch"""
-        return self.sample_ids
-
-    def shuffle_get_epoch(self) -> List[SampleID]:
-        """Shuffling epoch"""
-        return list(np.random.permutation(self.sample_ids))
+        self.get_epoch = get_epoch or no_shuffle_get_epoch
 
     def __iter__(self):
         worker_info = get_worker_info()

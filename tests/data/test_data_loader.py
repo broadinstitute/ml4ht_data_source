@@ -118,12 +118,7 @@ class TestSampleGetterIterableDataset:
         "multiprocess",
         [False, True],
     )
-    @pytest.mark.parametrize(
-        [
-            SampleGetterIterableDataset.no_shuffle_get_epoch,
-            SampleGetterIterableDataset.shuffle_get_epoch,
-        ],
-    )
+    @pytest.mark.parametrize()
     def test_loads_correctly(self, multiprocess, next_epoch):
         sample_ids = list(range(10))
         dataset = SampleGetterIterableDataset(
@@ -149,12 +144,7 @@ class TestSampleGetterIterableDataset:
         "multiprocess",
         [False, True],
     )
-    @pytest.mark.parametrize(
-        [
-            SampleGetterIterableDataset.no_shuffle_get_epoch,
-            SampleGetterIterableDataset.shuffle_get_epoch,
-        ],
-    )
+    @pytest.mark.parametrize()
     def test_no_working_ids(self, multiprocess, next_epoch):
         sample_ids = [3]
         dataset = SampleGetterIterableDataset(
