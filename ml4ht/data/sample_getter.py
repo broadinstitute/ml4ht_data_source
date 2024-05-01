@@ -28,11 +28,13 @@ class DataDescriptionSampleGetter:
         self,
         input_data_descriptions: List[DataDescription],
         output_data_descriptions: List[DataDescription],
-        option_picker: OptionPicker = None,
+        option_picker: OptionPicker=None,
+        restricted_sample_id_idx=None,
     ):
         self.input_data_descriptions = input_data_descriptions
         self.output_data_descriptions = output_data_descriptions
         self.option_picker = option_picker or self._default_option_picker
+        self.restricted_sample_id_idx = restricted_sample_id_idx
 
     @staticmethod
     def _default_option_picker(
@@ -67,6 +69,8 @@ class DataDescriptionSampleGetter:
             sample_id,
             self.input_data_descriptions + self.output_data_descriptions,
         )
+        if self.restricted_sample_id_idx is not None:
+            sample_id = sample_id[self.restricted_sample_id_idx]
         tensors_in = self._half_batch(sample_id, loading_options, True)
         tensors_out = self._half_batch(sample_id, loading_options, False)
         return tensors_in, tensors_out

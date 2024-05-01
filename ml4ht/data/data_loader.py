@@ -282,7 +282,10 @@ class ML4HCallbackDataset(Dataset):
         )
 
 
-def numpy_collate_fn(samples: List[Batch]) -> Batch:
+def numpy_collate_fn(
+    samples: List[Batch],
+    auto_float: bool = True
+) -> Batch:
     """
     Merges a list of ml4ht batch formatted data.
     Can be used as 'collate_fn` in torch.utils.data.DataLoader
@@ -290,13 +293,21 @@ def numpy_collate_fn(samples: List[Batch]) -> Batch:
     """
     # construct correctly-shaped empty arrays for input and output of model
     in_batch_keys = list(samples[0][0])
+    if auto_float:
+        in_dtypes = {k: np.float32 for k in in_batch_keys}
+    else:
+        in_dtypes = {k: samples[0][0][k].dtype for k in in_batch_keys}
     in_batch = {
-        k: np.empty((len(samples),) + samples[0][0][k].shape, dtype=np.float32)
+        k: np.empty((len(samples),) + samples[0][0][k].shape, dtype=in_dtypes[k])
         for k in in_batch_keys
     }
     out_batch_keys = list(samples[0][1])
+    if auto_float:
+        out_dtypes = {k: np.float32 for k in out_batch_keys}
+    else:
+        out_dtypes = {k: samples[0][1][k].dtype for k in out_batch_keys}
     out_batch = {
-        k: np.empty((len(samples),) + samples[0][1][k].shape, dtype=np.float32)
+        k: np.empty((len(samples),) + samples[0][1][k].shape, dtype=out_dtypes[k])
         for k in out_batch_keys
     }
     # fill in the values of the input and output arrays
