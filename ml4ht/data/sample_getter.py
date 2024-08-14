@@ -28,7 +28,7 @@ class DataDescriptionSampleGetter:
         self,
         input_data_descriptions: List[DataDescription],
         output_data_descriptions: List[DataDescription],
-        option_picker: OptionPicker=None,
+        option_picker: OptionPicker = None,
         restricted_sample_id_idx=None,
     ):
         self.input_data_descriptions = input_data_descriptions

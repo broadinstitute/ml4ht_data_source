@@ -284,7 +284,7 @@ class ML4HCallbackDataset(Dataset):
 
 def numpy_collate_fn(
     samples: List[Batch],
-    auto_float: bool = True
+    auto_float: bool = True,
 ) -> Batch:
     """
     Merges a list of ml4ht batch formatted data.
